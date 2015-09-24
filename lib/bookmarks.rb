@@ -14,14 +14,14 @@ class Bookmarks
 
   def initialize(search_term)
     @searching = /#{search_term}/i
-    @allurls = {}
+    @allurls = []
     parse
   end
 
   # output for zsh
   def autocomplete
-    @allurls.each do |title, link|
-      puts "#{link}:\n#{title}"
+    @allurls.each do |url|
+      puts url.folder + ':' + url.title
     end
   end
 
@@ -41,8 +41,7 @@ class Bookmarks
   def parse_link(base, link)
     if @searching.match(link['name']) or @searching.match(link['url'])
       if link['type'] == 'url'
-        name = "\e[0;34;49m[" + base + "]\e[0m\t" + link['name']
-        @allurls[name] = link['url']
+        @allurls.push(Bookmark.new base, link['name'], link['title'])
       end
     end
   end
@@ -54,5 +53,26 @@ class Bookmarks
       subdir = Folder.new(title, link['children'])
       parse(subdir)
     end
+  end
+end
+
+# just hold data
+class Bookmark
+  def initialize(f, t, u)
+    @folder = f
+    @title = t
+    @url = u
+  end
+
+  def folder
+    @folder
+  end
+
+  def title
+    @title
+  end
+
+  def url
+    @url
   end
 end
