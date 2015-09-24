@@ -3,7 +3,7 @@
 class Folder
   include Enumerable
   def initialize(title='/', json)
-    @title = title.gsub(/:|\ /, '-').downcase
+    @title = title.gsub(/[: ]/, '-').downcase
     @json = json
   end
 

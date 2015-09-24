@@ -14,7 +14,7 @@ class String
     end
 
     def blue
-      colorize(36)
+      colorize(34)
     end
 end
 
@@ -72,8 +72,8 @@ end
 # just hold data
 class Bookmark
   def initialize(f, t, u)
+    @title = t.gsub(/[: ]/, '-').downcase
     @folder = f
-    @title = t
     @url = u
   end
 
