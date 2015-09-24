@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+
+require_relative "../lib/bookmarks"
+require_relative "../lib/browser"
+
+
+# by jeremy warner
+# open up a website or search in google chrome from cli
+# also show and/or open up google chrome bookmarks
+
+
+# get chrome opening command
+
+include Browser
+chrome = Browser.get
+
+
+# actually goto site / query
+
+def prep(url)
+  if /^http/.match(url)
+    url
+  else
+    'http://' << url
+  end
+end
+
+def wrap(url)
+  "'" + url + "'"
+end
+
+domain = /.*(io|com|web|net|org|gov|edu)$/i
+search = "https://www.google.com/search?q="
+
+if ARGV.none? # no args given, show help
+  puts "usage: web [bookmark | website | search-term]"
+  exit 1
+end
+
+# doing autocompletion
+if ARGV[0] == "--complete"
+  ARGV.shift # remove flag
+  allargs = ARGV.join(' ')
+  bm = Bookmarks.new(allargs)
+  bm.autocomplete
+  exit 0
+end
+
+while ARGV do
+  allargs = "'" + ARGV.join(' ') + "'"
+  chromearg = ARGV.shift
+
+  if domain.match(chromearg) # website
+    puts 'opening ' + chromearg + '...'
+    exec chrome << wrap(prep(chromearg))
+
+  else # just search for it
+    puts 'searching ' + allargs + '...'
+    exec chrome << search << allargs
+
+  end
+end
