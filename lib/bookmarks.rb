@@ -21,7 +21,7 @@ class Bookmarks
   # output for zsh
   def autocomplete
     @allurls.each do |url|
-      puts url.folder + ':' + url.title
+      puts url.folder + '\:' + url.title
     end
   end
 
