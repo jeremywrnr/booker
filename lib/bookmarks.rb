@@ -21,8 +21,7 @@ class Bookmarks
   # output for zsh
   def autocomplete
     @allurls.each do |title, link|
-      puts title
-      puts "\e[0;34;49m#{link}\e[0m"
+      puts "#{link}:\n#{title}"
     end
   end
 
@@ -42,7 +41,7 @@ class Bookmarks
   def parse_link(base, link)
     if @searching.match(link['name']) or @searching.match(link['url'])
       if link['type'] == 'url'
-        name = base + "\t" + link['name']
+        name = "\e[0;34;49m[" + base + "]\e[0m\t" + link['name']
         @allurls[name] = link['url']
       end
     end
