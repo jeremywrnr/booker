@@ -1,17 +1,23 @@
 #compdef web
 #autoload
 
-#options
-_arguments \
-  '(--complete)--complete[bookmark completion]' \
-  '*:: :->subcmds' && return 0
+_web()
+{
+    #options
+    _arguments \
+        '(--complete)--complete[bookmark completion]' \
+        '*:: :->command' && return 0
 
-#bookmarks
-local -a search bookmarks searching
+    #get bookmarks
+    local -a search sites bookmarks
 
-# grab all command line args, remove 'web' from the beginning
-search=`echo $words[@] | sed -e '/^web /d'`
-sites=`web --complete $search`
-bookmarks=("${(f)${sites}}")
+    #grab all CLI args, remove 'web' from start
+    search=`echo $words[@] | sed -e '/^web /d'`
+    sites=`web --complete $search`
+    bookmarks=("${(f)${sites}}")
 
-_describe -t bookmarks "chrome bookmarks" bookmarks
+    #show bookmarks
+    _describe -t bookmarks "chrome bookmarks" bookmarks
+}
+
+_web

@@ -21,7 +21,7 @@ class Bookmarks
   # output for zsh
   def autocomplete
     @allurls.each do |url|
-      puts url.folder + '\:' + url.title
+      puts url.folder + ' - ' + url.title + ':' + url.url
     end
   end
 
@@ -41,7 +41,7 @@ class Bookmarks
   def parse_link(base, link)
     if @searching.match(link['name']) or @searching.match(link['url'])
       if link['type'] == 'url'
-        @allurls.push(Bookmark.new base, link['name'], link['title'])
+        @allurls.push(Bookmark.new base, link['name'], link['url'])
       end
     end
   end
