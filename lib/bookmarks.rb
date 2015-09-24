@@ -7,6 +7,18 @@ require "rubygems"
 require "json"
 
 
+# thx danhassin
+class String
+    def colorize(color)
+        "\e[0;#{color};49m#{self}\e[0m"
+    end
+
+    def blue
+      colorize(36)
+    end
+end
+
+
 class Bookmarks
   LOCAL_BOOKMARKS = "/Library/Application Support/Google/Chrome/Profile 1/bookmarks"
   RAW_JSON_BOOKMARKS = JSON.parse(open(ENV['HOME'] + LOCAL_BOOKMARKS).read)
@@ -21,7 +33,7 @@ class Bookmarks
   # output for zsh
   def autocomplete
     @allurls.each do |url|
-      puts url.folder + ' - ' + url.title + ':' + url.url
+      puts url.folder + url.title + ':' + "(#{url.url})".blue
     end
   end
 
