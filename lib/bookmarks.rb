@@ -40,7 +40,7 @@ class Bookmarks
       clean_name = dirty_base.gsub(dirty_regex, '')[0..50]
       #remove strang things from any linkurls
       clean_url = url.url.gsub(/[,'"&?].*/, '')
-      left_url = clean_url.gsub(/.*:\/+/, '')[0..50]
+      left_url = clean_url.gsub(/.*:\/+/, '').gsub(/:/, '')[0..50]
       puts "#{clean_name} - #{left_url}" + ":" + "[#{i}]".green + "(#{clean_url})".blue
     end
   end
