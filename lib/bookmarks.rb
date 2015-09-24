@@ -49,7 +49,7 @@ class Bookmarks
   # discover and parse folders
   def parse_folder(base, link)
     if link['type'] == 'folder'
-      title = base.title + '/'+ link['name']
+      title = base.title + link['name'] + '/'
       subdir = Folder.new(title, link['children'])
       parse(subdir)
     end
