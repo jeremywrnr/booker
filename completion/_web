@@ -4,9 +4,9 @@
 _web()
 {
     #options
-    _arguments \
-        '(--complete)--complete[bookmark completion]' \
-        '*:: :->command' && return 0
+    #_arguments \
+        #'(--complete)--complete[bookmark completion]' \
+        #'*:: :->command' && return 0
 
     #get bookmarks
     local -a search sites bookmarks

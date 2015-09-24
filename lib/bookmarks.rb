@@ -39,7 +39,8 @@ class Bookmarks
 
   # add link to results
   def parse_link(base, link)
-    if @searching.match(link['name']) or @searching.match(link['url'])
+    checking = [base, link['name'], link['url']]
+    if checking.any? {|x| @searching.match x }
       if link['type'] == 'url'
         @allurls.push(Bookmark.new base, link['name'], link['url'])
       end
