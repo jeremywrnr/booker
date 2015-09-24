@@ -9,13 +9,14 @@ require "json"
 
 # thx danhassin
 class String
-    def colorize(color)
-        "\e[0;#{color};49m#{self}\e[0m"
+    def colorize(color, mod)
+        "\e[#{mod};#{color};49m#{self}\e[0;0m"
     end
 
-    def blue
-      colorize(34)
-    end
+    def reset() colorize(0,0) end
+    def white() colorize(37,1) end
+    def green() colorize(32,0) end
+    def blue() colorize(34,0) end
 end
 
 
@@ -32,8 +33,15 @@ class Bookmarks
 
   # output for zsh
   def autocomplete
-    @allurls.each do |url|
-      puts url.folder + url.title + ':' + "(#{url.url})".blue
+    @allurls.each_with_index do |url, i|
+      #delete anything not allowed in linktitle
+      dirty_base = url.folder + url.title
+      dirty_regex = /[^a-z0-9\-\/]/i
+      clean_name = dirty_base.gsub(dirty_regex, '')[0..50]
+      #remove strang things from any linkurls
+      clean_url = url.url.gsub(/[,'"&?].*/, '')
+      left_url = clean_url.gsub(/.*:\/+/, '')[0..50]
+      puts "#{clean_name} - #{left_url}" + ":" + "[#{i}]".green + "(#{clean_url})".blue
     end
   end
 
@@ -72,7 +80,7 @@ end
 # just hold data
 class Bookmark
   def initialize(f, t, u)
-    @title = t.gsub(/[: ]/, '-').downcase
+    @title = t.gsub(/[: ,'"+]/, '-').downcase
     @folder = f
     @url = u
   end
