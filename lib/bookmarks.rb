@@ -41,19 +41,23 @@ class Bookmarks
 
   # output for zsh
   def autocomplete
-    @allurls.each_with_index do |url, i|
+    @allurls.each do |url|
       # delete anything not allowed in linktitle
-      dirty_base = url.folder + url.title
-      name = dirty_base.gsub(/[^a-z0-9\-\/]/i, '').window(40)
+      dirty_t = url.folder + url.title
+      dirty_t = dirty_t.gsub(/[^a-z0-9\-\/]/i, '')
+      dirty_t = dirty_t.gsub(/\-+/, '-')
+      name = dirty_t[0..50]
 
       # remove strange things from any linkurls
-      left_url = url.url.gsub(/.*:\/+/, '').gsub(/:/, '').gsub(/---/, '-').window(30)
-      clean_url = url.url.gsub(/[,'"&?].*/, '')
+      dirty_u = url.url.gsub(/[,'"&?].*/, '')
+      dirty_u = dirty_u.gsub(/.*:\/+/,'')
+      link = dirty_u[0..50]
 
       # normalize string lengths
 
       # print out title and cleaned url, for autocompetion
-      puts "".reset + "#{name}  --  #{left_url}" + ":" + "[#{i}]".green + "(#{clean_url})".blue
+      puts url.id + ":" + name + " - " + link
+      #puts url.id + ":" + name.white + " - " + clean_url.blue
     end
   end
 
@@ -71,10 +75,10 @@ class Bookmarks
 
   # add link to results
   def parse_link(base, link)
-    checking = [base, link['name'], link['url']]
+    checking = [base, link['name'], link['url'], link['id']]
     if checking.any? {|x| @searching.match x }
       if link['type'] == 'url'
-        @allurls.push(Bookmark.new base, link['name'], link['url'])
+        @allurls.push(Bookmark.new base, link['name'], link['url'], link['id'])
       end
     end
   end
@@ -91,10 +95,11 @@ end
 
 # just hold data
 class Bookmark
-  def initialize(f, t, u)
+  def initialize(f, t, u, id)
     @title = t.gsub(/[: ,'"+]/, '-').downcase
     @folder = f
     @url = u
+    @id = id
   end
 
   def folder
@@ -103,6 +108,10 @@ class Bookmark
 
   def title
     @title
+  end
+
+  def id
+    @id
   end
 
   def url

@@ -1,12 +1,19 @@
 #compdef web
 #autoload
 
+
+_bookmarks()
+{
+}
+
 _web()
 {
     #options
     _arguments \
-        '(--complete)--complete[bookmark completion]' \
-        '*:: :->command' && return 0
+        '(-c)--complete[bookmark completion]' \
+        '(-s)--search[search google for...]' \
+        '*:: :->bookmarks'\
+        && return 0
 
     #get bookmarks
     local -a search sites bookmarks
@@ -17,7 +24,8 @@ _web()
     bookmarks=("${(f)${sites}}")
 
     #show bookmarks
-    _describe -t bookmarks "chrome bookmarks" bookmarks
+    _alternative "bookmarks:chrome bookmarks:($bookmarks)"
 }
+
 
 _web
