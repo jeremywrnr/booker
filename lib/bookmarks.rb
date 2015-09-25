@@ -9,14 +9,22 @@ require "json"
 
 # thx danhassin
 class String
-    def colorize(color, mod)
-        "\e[#{mod};#{color};49m#{self}\e[0;0m"
-    end
+  def colorize(color, mod)
+    "\e[#{mod};#{color};49m#{self}\e[0;0m"
+  end
 
-    def reset() colorize(0,0) end
-    def white() colorize(37,1) end
-    def green() colorize(32,0) end
-    def blue() colorize(34,0) end
+  def window(width)
+    if self.length >= width
+      self[0..width-1]
+    else
+      self.ljust(width)
+    end
+  end
+
+  def reset() colorize(0,0) end
+  def white() colorize(37,1) end
+  def green() colorize(32,0) end
+  def blue() colorize(34,0) end
 end
 
 
@@ -34,14 +42,18 @@ class Bookmarks
   # output for zsh
   def autocomplete
     @allurls.each_with_index do |url, i|
-      #delete anything not allowed in linktitle
+      # delete anything not allowed in linktitle
       dirty_base = url.folder + url.title
-      dirty_regex = /[^a-z0-9\-\/]/i
-      clean_name = dirty_base.gsub(dirty_regex, '')[0..50]
-      #remove strang things from any linkurls
+      name = dirty_base.gsub(/[^a-z0-9\-\/]/i, '').window(40)
+
+      # remove strange things from any linkurls
+      left_url = url.url.gsub(/.*:\/+/, '').gsub(/:/, '').gsub(/---/, '-').window(30)
       clean_url = url.url.gsub(/[,'"&?].*/, '')
-      left_url = clean_url.gsub(/.*:\/+/, '').gsub(/:/, '')[0..50]
-      puts "#{clean_name} - #{left_url}" + ":" + "[#{i}]".green + "(#{clean_url})".blue
+
+      # normalize string lengths
+
+      # print out title and cleaned url, for autocompetion
+      puts "#{name}  --  #{left_url}" + ":" + "[#{i}]".green + "(#{clean_url})".blue
     end
   end
 
