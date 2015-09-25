@@ -10,7 +10,7 @@ require "json"
 # thx danhassin
 class String
   def colorize(color, mod)
-    "\e[#{mod};#{color};49m#{self}\e[0;0m"
+    "\033[#{mod};#{color};49m#{self}\033[0;0m"
   end
 
   def window(width)
@@ -43,21 +43,20 @@ class Bookmarks
   def autocomplete
     @allurls.each do |url|
       # delete anything not allowed in linktitle
-      dirty_t = url.folder + url.title
-      dirty_t = dirty_t.gsub(/[^a-z0-9\-\/]/i, '')
+      dirty_t = url.title.gsub(/[^a-z0-9\-\/]/i, '')
+      dirty_t = url.folder + ":" + dirty_t
       dirty_t = dirty_t.gsub(/\-+/, '-')
-      name = dirty_t[0..50]
+      dirty_t = dirty_t.gsub(/ /,'')
+      name = dirty_t.window(50)
 
       # remove strange things from any linkurls
       dirty_u = url.url.gsub(/[,'"&?].*/, '')
       dirty_u = dirty_u.gsub(/.*:\/+/,'')
-      link = dirty_u[0..50]
-
-      # normalize string lengths
+      dirty_u = dirty_u.gsub(/ /,'')
+      link = dirty_u.window(50)
 
       # print out title and cleaned url, for autocompetion
-      puts url.id + "\:\'" + name + " - " + link + "\'"
-      #puts url.id + ":" + name.white + " - " + link.blue
+      puts url.id + ":" + name + ":" + link
     end
   end
 

@@ -5,22 +5,49 @@
 _web()
 {
     #options
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
     _arguments \
-        '(-c)--complete[bookmark completion]' \
-        '(-s)--search[search google for...]' \
-        '*:: :->command'\
-        && return 0
+        '(-c)--complete[bookmark completion]'\
+        '(-s)--search[search google for...]'\
+        '*:cmds:->cmds' && return 0
 
-    #get bookmarks
+    #get chrome bookmarks
     local -a search sites bookmarks
+    local -a id_numbers descriptions
 
     #grab all CLI args, remove 'web' from start
     search=`echo $words[@] | sed -e '/^web /d'`
     sites=`web --complete $search`
     bookmarks=("${(f)${sites}}")
 
+    #parse parts
+    id_numbers=()
+    descriptions=()
+
+    #terminal colors
+    RESET=`echo -e "\033[0;0m"`
+    WHITE=`echo -e "\033[0;37m"`
+    BLUE=`echo -e "\033[4;34m"`
+    CYAN=`echo -e "\033[0;36m"`
+
     #show bookmarks
-    _describe -t bookmarks "chrome bookmarks" bookmarks
+    for bookmark in ${bookmarks[@]}; do
+        local -a split
+        split=("${(@s/:/)bookmark}")
+        id_numbers+=( $split[1] )
+        descriptions+=( "$split[1] $split[2]$split[3] $BLUE$split[4]$RESET" )
+        #descriptions+=( "$split[1] $WHITE$split[2]$RESET$split[3] $BLUE$split[4]$RESET" )
+    done
+
+    #finally, add completions
+    compadd -l -o -X 'found chrome bookmarks:'\
+        -d descriptions -a id_numbers
+
+	if [[ -n "$state" ]]; then
+		echo $curcontext
+		echo $opt_args
+	fi
 }
 
 
