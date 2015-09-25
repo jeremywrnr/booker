@@ -2,17 +2,13 @@
 #autoload
 
 
-_bookmarks()
-{
-}
-
 _web()
 {
     #options
     _arguments \
         '(-c)--complete[bookmark completion]' \
         '(-s)--search[search google for...]' \
-        '*:: :->bookmarks'\
+        '*:: :->command'\
         && return 0
 
     #get bookmarks
@@ -24,7 +20,7 @@ _web()
     bookmarks=("${(f)${sites}}")
 
     #show bookmarks
-    _alternative "bookmarks:chrome bookmarks:($bookmarks)"
+    _describe -t bookmarks "chrome bookmarks" bookmarks
 }
 
 

@@ -56,8 +56,8 @@ class Bookmarks
       # normalize string lengths
 
       # print out title and cleaned url, for autocompetion
-      puts url.id + ":" + name + " - " + link
-      #puts url.id + ":" + name.white + " - " + clean_url.blue
+      puts url.id + "\:\'" + name + " - " + link + "\'"
+      #puts url.id + ":" + name.white + " - " + link.blue
     end
   end
 
