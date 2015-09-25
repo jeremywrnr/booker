@@ -53,7 +53,7 @@ class Bookmarks
       # normalize string lengths
 
       # print out title and cleaned url, for autocompetion
-      puts "#{name}  --  #{left_url}" + ":" + "[#{i}]".green + "(#{clean_url})".blue
+      puts "".reset + "#{name}  --  #{left_url}" + ":" + "[#{i}]".green + "(#{clean_url})".blue
     end
   end
 
