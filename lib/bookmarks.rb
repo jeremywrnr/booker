@@ -53,7 +53,7 @@ class Bookmarks
       dirty_u = url.url.gsub(/[,'"&?].*/, '')
       dirty_u = dirty_u.gsub(/.*:\/+/,'')
       dirty_u = dirty_u.gsub(/ /,'')
-      link = dirty_u.window(50)
+      link = dirty_u[0..75]
 
       # print out title and cleaned url, for autocompetion
       puts url.id + ":" + name + ":" + link
