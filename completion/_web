@@ -2,15 +2,22 @@
 #autoload
 
 
-_web()
-{
+_web_bookmarks() {
+}
+
+
+_web() {
+
     #options
-    local curcontext="$curcontext" state line
+    local curcontext="$curcontext" line state ret=1
     typeset -A opt_args
-    _arguments \
-        '(-c)--complete[bookmark completion]'\
-        '(-s)--search[search google for...]'\
-        '*:cmds:->cmds' && return 0
+
+    _arguments -C \
+        '(--search)--search[search google for...]'\
+        '(-s)-s[search google for...]'\
+        '(--bookmark)--bookmark[bookmark completion]'\
+        '(-b)-b[bookmark completion]'\
+        '*:bookmarks:->bookmarks' && ret=0
 
     #get chrome bookmarks
     local -a search sites bookmarks
@@ -37,17 +44,14 @@ _web()
         split=("${(@s/:/)bookmark}")
         id_numbers+=( $split[1] )
         descriptions+=( "$split[1] $split[2]$split[3] $BLUE$split[4]$RESET" )
-        #descriptions+=( "$split[1] $WHITE$split[2]$RESET$split[3] $BLUE$split[4]$RESET" )
     done
 
+    echo $curcontext
     #finally, add completions
-    compadd -l -o -X 'found chrome bookmarks:'\
+    compadd -l -X 'found chrome bookmarks:'\
         -d descriptions -a id_numbers
 
-	if [[ -n "$state" ]]; then
-		echo $curcontext
-		echo $opt_args
-	fi
+    #_alternative "bookmarks:bookmarks:($id_numbers)"
 }
 
 
