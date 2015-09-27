@@ -44,7 +44,7 @@ class Bookmarks
     @allurls.each do |url|
       # delete anything not allowed in linktitle
       dirty_t = url.title.gsub(/[^a-z0-9\-\/]/i, '')
-      dirty_t = url.folder + ":" + dirty_t
+      dirty_t = url.folder + dirty_t
       dirty_t = dirty_t.gsub(/\-+/, '-')
       dirty_t = dirty_t.gsub(/ /,'')
       name = dirty_t.window(50)
@@ -56,7 +56,7 @@ class Bookmarks
       link = dirty_u[0..75]
 
       # print out title and cleaned url, for autocompetion
-      puts url.id + ":" + name + ":" + link
+      puts url.id + "_" + name + "|" + link
     end
   end
 
