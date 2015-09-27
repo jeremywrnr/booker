@@ -17,7 +17,7 @@ class String
     if self.length >= width
       self[0..width-1]
     else
-      self.ljust(width)
+      self.ljust(width, '_')
     end
   end
 
