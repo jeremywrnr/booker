@@ -43,7 +43,7 @@ class Bookmarks
   def autocomplete
     @allurls.each do |url|
       # delete anything not allowed in linktitle
-      dirty_t = url.title.gsub(/[^a-z0-9\-\/]/i, '')
+      dirty_t = url.title.gsub(/[^a-z0-9\-\/_]/i, '')
       dirty_t = url.folder + dirty_t
       dirty_t = dirty_t.gsub(/\-+/, '-')
       dirty_t = dirty_t.gsub(/ /,'')
@@ -57,6 +57,13 @@ class Bookmarks
 
       # print out title and cleaned url, for autocompetion
       puts url.id + "_" + name + "|" + link
+    end
+  end
+
+  # get link (from id number)
+  def bookmark_url(id)
+    @allurls.each do |url|
+      return url.url if id == url.id
     end
   end
 
@@ -95,7 +102,7 @@ end
 # just hold data
 class Bookmark
   def initialize(f, t, u, id)
-    @title = t.gsub(/[: ,'"+]/, '-').downcase
+    @title = t.gsub(/[: ,'"+\-]/, '_').downcase
     @folder = f
     @url = u
     @id = id

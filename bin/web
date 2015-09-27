@@ -25,6 +25,10 @@ def prep(url)
   end
 end
 
+def getbm(url)
+  url[0..5].gsub(/[^0-9]/, '')
+end
+
 def wrap(url)
   "'" + url + "'"
 end
@@ -46,11 +50,36 @@ if ARGV[0] == "--complete"
   exit 0
 end
 
+# doing forced bookmarking
+if ARGV[0] == "--bookmark" or ARGV[0] == "-b"
+  bm = Bookmarks.new('')
+  bookmark = getbm(ARGV[1])
+  url = bm.bookmark_url(bookmark)
+  exec chrome << url
+  exit 0
+end
+
+# doing forced searching
+if ARGV[0] == "--search" or ARGV[0] == "-s"
+  ARGV.shift # remove flag
+  puts 'searching ' + allargs + '...'
+  exec chrome << search << allargs
+  exit 0
+end
+
+# interpret
 while ARGV do
   allargs = "'" + ARGV.join(' ') + "'"
   chromearg = ARGV.shift
 
-  if domain.match(chromearg) # website
+  if /[0-9]/.match(chromearg[0]) # bookmark
+    bm = Bookmarks.new('')
+    bookmark = getbm(chromearg)
+    url = bm.bookmark_url(bookmark)
+    puts 'opening ' + url + '...'
+    exec chrome << url
+
+  elsif domain.match(chromearg) # website
     puts 'opening ' + chromearg + '...'
     exec chrome << wrap(prep(chromearg))
 
