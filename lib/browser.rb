@@ -28,4 +28,16 @@ module Browser
       'xdg-open ' # completely guessing here
     end
   end
+
+  def prep(url)
+    if /^http/.match(url)
+      url
+    else
+      'http://' << url
+    end
+  end
+
+  def wrap(url)
+    "'" + url + "'"
+  end
 end

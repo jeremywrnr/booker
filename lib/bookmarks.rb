@@ -60,6 +60,12 @@ class Bookmarks
     end
   end
 
+
+  # parse a bookmark's id from tab completed form
+  def bookmark_id(url)
+    url[0..5].gsub(/[^0-9]/, '')
+  end
+
   # get link (from id number)
   def bookmark_url(id)
     @allurls.each do |url|

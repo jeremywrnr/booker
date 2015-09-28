@@ -1,45 +1,32 @@
 #!/usr/bin/env ruby
 
+
 require_relative "../lib/bookmarks"
 require_relative "../lib/browser"
 
 
-# by jeremy warner
+# web by jeremy warner
 # open up a website or search in google chrome from cli
 # also show and/or open up google chrome bookmarks
 
 
-# get chrome opening command
-
+# get web opening command
 include Browser
-chrome = Browser.get
+browse = Browser.get
 
 
 # actually goto site / query
-
-def prep(url)
-  if /^http/.match(url)
-    url
-  else
-    'http://' << url
-  end
-end
-
-def getbm(url)
-  url[0..5].gsub(/[^0-9]/, '')
-end
-
-def wrap(url)
-  "'" + url + "'"
-end
-
 domain = /.*(io|com|web|net|org|gov|edu)$/i
 search = "https://www.google.com/search?q="
 
+
 if ARGV.none? # no args given, show help
   puts "usage: web [bookmark | website | search-term]"
+  puts "       --bookmark | -b  -- explicity open bookmark"
+  puts "       --search | -s -- explicity search for arguments"
   exit 1
 end
+
 
 # doing autocompletion
 if ARGV[0] == "--complete"
@@ -50,43 +37,46 @@ if ARGV[0] == "--complete"
   exit 0
 end
 
+
 # doing forced bookmarking
 if ARGV[0] == "--bookmark" or ARGV[0] == "-b"
   bm = Bookmarks.new('')
-  bookmark = getbm(ARGV[1])
+  bookmark = bm.bookmark_id(ARGV[1])
   url = bm.bookmark_url(bookmark)
   puts 'opening ' + url + '...'
-  exec chrome << wrap(url)
+  exec browse << wrap(url)
   exit 0
 end
+
 
 # doing forced searching
 if ARGV[0] == "--search" or ARGV[0] == "-s"
   ARGV.shift # remove flag
   puts 'searching ' + allargs + '...'
-  exec chrome << search << allargs
+  exec browse << search << allargs
   exit 0
 end
+
 
 # interpret
 while ARGV do
   allargs = "'" + ARGV.join(' ') + "'"
-  chromearg = ARGV.shift
+  browsearg = ARGV.shift
 
-  if /[0-9]/.match(chromearg[0]) # bookmark
+  if /[0-9]/.match(browsearg[0]) # bookmark
     bm = Bookmarks.new('')
-    bookmark = getbm(chromearg)
+    bookmark = bm.bookmark_id(browsearg)
     url = bm.bookmark_url(bookmark)
     puts 'opening ' + url + '...'
-    exec chrome << wrap(url)
+    exec browse << wrap(url)
 
-  elsif domain.match(chromearg) # website
-    puts 'opening ' + chromearg + '...'
-    exec chrome << wrap(prep(chromearg))
+  elsif domain.match(browsearg) # website
+    puts 'opening ' + browsearg + '...'
+    exec browse << wrap(prep(browsearg))
 
-  else # just search for it
+  else # just search for these arguments
     puts 'searching ' + allargs + '...'
-    exec chrome << search << allargs
+    exec browse << search << allargs
 
   end
 end
