@@ -23,7 +23,7 @@ module Browser
     if OS.windows?
       '/cygdrive/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe '
     elsif OS.mac?
-      'open -a "Google Chrome" '
+      'open -a "Google Chrome" --args '
     elsif OS.nix?
       'xdg-open ' # completely guessing here
     end
