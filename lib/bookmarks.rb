@@ -68,9 +68,11 @@ class Bookmarks
 
   # get link (from id number)
   def bookmark_url(id)
+    bm_url = ''
     @allurls.each do |url|
-      return url.url if id == url.id
+      bm_url = url.url if id == url.id
     end
+    bm_url
   end
 
   # recursively parse gc bookmarks
