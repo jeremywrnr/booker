@@ -12,8 +12,24 @@ _web_bookmarks() {
     sites=`web --complete $search`
     bookmarks=("${(f)${sites}}")
 
-    #finally, add completions
-    _alternative "bookmarks:bookmarks:($bookmarks)"
+    #terminal colors
+    RESET=`echo -e "\033[0;0m"`
+    WHITE=`echo -e "\033[0;37m"`
+    BLUE=`echo -e "\033[4;34m"`
+    CYAN=`echo -e "\033[0;36m"`
+
+    #parse parts
+    id_numbers=()
+    descriptions=()
+    for bookmark in ${bookmarks[@]}; do
+        local -a split
+        split=("${(@s/:/)bookmark}")
+        ids+=( $split[1] )
+        descriptions+=( "$BLUE$split[2]$RESET" )
+    done
+
+    #show bookmarks
+    compadd -l -X 'found bookmarks:' -d descriptions -a ids
 }
 
 
@@ -30,23 +46,3 @@ _web() {
 
 
 _web
-
-
-#old
-#parse parts
-#id_numbers=()
-#descriptions=()
-#terminal colors
-#RESET=`echo -e "\033[0;0m"`
-#WHITE=`echo -e "\033[0;37m"`
-#BLUE=`echo -e "\033[4;34m"`
-#CYAN=`echo -e "\033[0;36m"`
-#show bookmarks
-#for bookmark in ${bookmarks[@]}; do
-#local -a split
-#split=("${(@s/:/)bookmark}")
-#ids+=( $split[1] )
-#descriptions+=( "$split[1] $split[2]$split[3] $BLUE$split[4]$RESET" )
-#compadd -l -U -d "$split[1] $split[2]$split[3] $BLUE$split[4]$RESET" $split[1]
-#done
-#compadd -l -X 'found bookmarks:' -d descriptions -a ids
