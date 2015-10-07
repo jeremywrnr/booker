@@ -6,6 +6,9 @@ require_relative "folder"
 require "rubygems"
 require "json"
 
+# get the width of the current terminal # [columns, lines]
+#require "highline"
+#COLWIDTH = HighLine::SystemExtensions.terminal_size[0]
 
 # thx danhassin
 class String
@@ -41,19 +44,22 @@ class Bookmarks
 
   # output for zsh
   def autocomplete
+    titlewidth = 80
     @allurls.each do |url|
       # delete anything not allowed in linktitle
       dirty_t = url.title.gsub(/[^a-z0-9\-\/_]/i, '')
       dirty_t = url.folder + dirty_t
       dirty_t = dirty_t.gsub(/\-+/, '-')
       dirty_t = dirty_t.gsub(/ /,'')
-      name = dirty_t.window(50)
+      name = dirty_t
 
       # remove strange things from any linkurls
       dirty_u = url.url.gsub(/[,'"&?].*/, '')
       dirty_u = dirty_u.gsub(/.*:\/+/,'')
       dirty_u = dirty_u.gsub(/ /,'')
-      link = dirty_u[0..75]
+      #right = [url.url.length, COLWIDTH-titlewidth].max
+      #link = dirty_u[0..right-1]
+      link = dirty_u
 
       # print out title and cleaned url, for autocompetion
       puts url.id + "_" + name + ":" + link
@@ -109,6 +115,7 @@ end
 
 # just hold data
 class Bookmark
+  # clean bookmark title, set attrs
   def initialize(f, t, u, id)
     @title = t.gsub(/[: ,'"+\-]/, '_').downcase
     @folder = f

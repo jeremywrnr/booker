@@ -14,22 +14,15 @@ _web_bookmarks() {
 
     #terminal colors
     RESET=`echo -e "\033[0;0m"`
-    WHITE=`echo -e "\033[0;37m"`
     BLUE=`echo -e "\033[4;34m"`
-    CYAN=`echo -e "\033[0;36m"`
 
     #parse parts
-    id_numbers=()
-    descriptions=()
     for bookmark in ${bookmarks[@]}; do
         local -a split
         split=("${(@s/:/)bookmark}")
-        ids+=( $split[1] )
-        descriptions+=( "$BLUE$split[2]$RESET" )
+        compadd -ol "$split[1]"
     done
-
-    #show bookmarks
-    compadd -l -X 'found bookmarks:' -d descriptions -a ids
+    return
 }
 
 
@@ -41,7 +34,7 @@ _web() {
         '(-b)-b[bookmark completion]'\
         '*::bookmarks:->bookmarks' && return
 
-    _web_bookmarks $words
+    _web_bookmarks $words && return
 }
 
 
