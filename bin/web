@@ -13,17 +13,14 @@ require_relative "../lib/browser"
 # get web opening command
 include Browser
 browse = Browser.get
-
-
-# actually goto site / query
-domain = /.*(io|com|web|net|org|gov|edu)$/i
-search = "https://www.google.com/search?q="
+domain = Browser.domains
+search = Browser.search_engine
 
 
 if ARGV.none? # no args given, show help
   puts "usage: web [bookmark | website | search-term]"
-  puts "       --bookmark | -b  -- explicity open bookmark"
-  puts "       --search | -s -- explicity search for arguments"
+  puts "       --bookmark | -b -- explicity open bookmark"
+  puts "       --search   | -s -- explicity search for arguments"
   exit 1
 end
 
