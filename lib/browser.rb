@@ -29,6 +29,16 @@ module Browser
     end
   end
 
+  def domains
+    /.*(io|com|web|net|org|gov|edu)$/i
+  end
+
+  def search_engine
+    #"https://www.google.com/search?q="
+    #"http://www.bing.com/search?q=" #lol
+    "https://duckduckgo.com/?q="
+  end
+
   def prep(url)
     if /^http/.match(url)
       url
