@@ -19,7 +19,7 @@ end
 
 module Browser
   extend OS
-  def get
+  def browse
     if OS.windows?
       '/cygdrive/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe '
     elsif OS.mac?
@@ -29,15 +29,17 @@ module Browser
     end
   end
 
-  def domains
+  def domain
     /.*(io|com|web|net|org|gov|edu)$/i
   end
 
-  def search_engine
+  def search
     #"https://www.google.com/search?q="
     #"http://www.bing.com/search?q=" #lol
     "https://duckduckgo.com/?q="
   end
+
+  # helper methods
 
   def prep(url)
     if /^http/.match(url)

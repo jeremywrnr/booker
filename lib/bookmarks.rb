@@ -2,8 +2,8 @@
 # on operating system as well
 
 
-require_relative "folder"
 require "rubygems"
+require "folder"
 require "json"
 
 # get the width of the current terminal # [columns, lines]
