@@ -1,2 +1,15 @@
 *.swp
 *.swo
+*.gem
+*.rbc
+
+/.config
+/coverage/
+/InstalledFiles
+/pkg/
+/spec/reports/
+/test/tmp/
+/test/version_tmp/
+/tmp/
+
+.rvmrc
