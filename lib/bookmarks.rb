@@ -3,8 +3,9 @@
 
 
 require "rubygems"
-require "folder"
 require "json"
+require_relative "folder"
+
 
 # get the width of the current terminal # [columns, lines]
 #require "highline"

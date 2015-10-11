@@ -1,8 +1,8 @@
 # parse command line args
 
 
-require_relative "bookmarks"
-require_relative "browser"
+require_relative 'bookmarks'
+require_relative 'browser'
 
 
 # get web opening command

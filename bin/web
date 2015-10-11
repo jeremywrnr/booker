@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 
-require "booker"
+require_relative "../lib/booker"
 
 
 # web by jeremy warner
