@@ -11,69 +11,73 @@ require_relative "../lib/browser"
 
 
 # get web opening command
-include Browser
-browse = Browser.get
-domain = Browser.domains
-search = Browser.search_engine
+class Booker
+  include Browser
+  def initialize(args)
+    parse args
+  end
+
+  def parse(args)
+    if args.none? # no args given, show help
+      puts "usage: web [bookmark | website | search-term]"
+      puts "       --bookmark | -b -- explicity open bookmark"
+      puts "       --search   | -s -- explicity search for arguments"
+      exit 1
+    end
+
+    # doing autocompletion
+    if args[0] == "--complete"
+      args.shift # remove flag
+      allargs = args.join(' ')
+      bm = Bookmarks.new(allargs)
+      bm.autocomplete
+      exit 0
+    end
 
 
-if ARGV.none? # no args given, show help
-  puts "usage: web [bookmark | website | search-term]"
-  puts "       --bookmark | -b -- explicity open bookmark"
-  puts "       --search   | -s -- explicity search for arguments"
-  exit 1
-end
+    # doing forced bookmarking
+    if args[0] == "--bookmark" or args[0] == "-b"
+      bm = Bookmarks.new('')
+      bookmark = bm.bookmark_id(args[1])
+      url = bm.bookmark_url(bookmark)
+      puts 'opening ' + url + '...'
+      exec browse << wrap(url)
+      exit 0
+    end
 
 
-# doing autocompletion
-if ARGV[0] == "--complete"
-  ARGV.shift # remove flag
-  allargs = ARGV.join(' ')
-  bm = Bookmarks.new(allargs)
-  bm.autocomplete
-  exit 0
-end
+    # doing forced searching
+    if args[0] == "--search" or args[0] == "-s"
+      args.shift # remove flag
+      puts 'searching ' + allargs + '...'
+      exec browse << search << allargs
+      exit 0
+    end
 
 
-# doing forced bookmarking
-if ARGV[0] == "--bookmark" or ARGV[0] == "-b"
-  bm = Bookmarks.new('')
-  bookmark = bm.bookmark_id(ARGV[1])
-  url = bm.bookmark_url(bookmark)
-  puts 'opening ' + url + '...'
-  exec browse << wrap(url)
-  exit 0
-end
+    # interpret
+    while args do
+      allargs = "'" + args.join(' ') + "'"
+      browsearg = args.shift
 
+      if /[0-9]/.match(browsearg[0]) # bookmark
+        bm = Bookmarks.new('')
+        bookmark = bm.bookmark_id(browsearg)
+        url = bm.bookmark_url(bookmark)
+        puts 'opening ' + url + '...'
+        exec browse << wrap(url)
 
-# doing forced searching
-if ARGV[0] == "--search" or ARGV[0] == "-s"
-  ARGV.shift # remove flag
-  puts 'searching ' + allargs + '...'
-  exec browse << search << allargs
-  exit 0
-end
+      elsif domain.match(browsearg) # website
+        puts 'opening ' + browsearg + '...'
+        exec browse << wrap(prep(browsearg))
 
+      else # just search for these arguments
+        puts 'searching ' + allargs + '...'
+        exec browse << search << allargs
 
-# interpret
-while ARGV do
-  allargs = "'" + ARGV.join(' ') + "'"
-  browsearg = ARGV.shift
-
-  if /[0-9]/.match(browsearg[0]) # bookmark
-    bm = Bookmarks.new('')
-    bookmark = bm.bookmark_id(browsearg)
-    url = bm.bookmark_url(bookmark)
-    puts 'opening ' + url + '...'
-    exec browse << wrap(url)
-
-  elsif domain.match(browsearg) # website
-    puts 'opening ' + browsearg + '...'
-    exec browse << wrap(prep(browsearg))
-
-  else # just search for these arguments
-    puts 'searching ' + allargs + '...'
-    exec browse << search << allargs
-
+      end
+    end
   end
 end
+
+Booker.new(ARGV)
