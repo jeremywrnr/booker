@@ -1,6 +1,12 @@
 cli google chrome bookmark parser
 =================================
 
+## installing
+
+    $ [sudo] gem install booker
+
+## about
+
 This is a tool that allows you to tab complete (in zsh only) google chrome (gc)
 bookmarks, and then open them in the browser of your choice. gc stores the
 users bookmarks in a large json file locally, so this can be read/parsed by the
