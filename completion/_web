@@ -3,6 +3,9 @@
 
 
 _web_bookmarks() {
+    #http://zsh.sourceforge.net/Guide/zshguide06.html#l147
+    setopt glob bareglobqual nullglob rcexpandparam extendedglob automenu
+    unsetopt allexport aliases errexit octalzeroes ksharrays cshnullglob
 
     #get chrome bookmarks
     local -a bookmarks sites search
@@ -13,28 +16,41 @@ _web_bookmarks() {
     bookmarks=("${(f)${sites}}")
 
     #terminal colors
-    RESET=`echo -e "\033[0;0m"`
     BLUE=`echo -e "\033[4;34m"`
+    RESET=`echo -e "\033[0;0m"`
 
-    #parse parts
+    #parse parts, color
+    local -a ids links
     for bookmark in ${bookmarks[@]}; do
         local -a split
         split=("${(@s/:/)bookmark}")
-        compadd -ol "$split[1]"
+        ids+=( $split[1] )
+        links+=("$split[2] $BLUE/$split[3]$RESET")
     done
-    return
+
+    #finally, add completions
+    #echo $curcontext
+    #echo $opt_args
+    compstate[insert]=menu
+    compadd -U -l -X 'found chrome bookmarks:' -d links -a ids
+    #compadd -X 'found chrome bookmarks:' "$links[@]" - "$ids[@]"
+
 }
 
 
 _web() {
+    compstate[insert]=menu
+    local curcontext state line
+    typeset -A opt_args
     _arguments\
         '(--search)--search[search google for...]'\
         '(-s)-s[search google for...]'\
         '(--bookmark)--bookmark[bookmark completion]'\
         '(-b)-b[bookmark completion]'\
-        '*::bookmarks:->bookmarks' && return
+        '*::bookmarks:->bookmarks' && return 0
 
-    _web_bookmarks $words && return
+    bm_query=$words
+    _web_bookmarks $bm_query
 }
 
 

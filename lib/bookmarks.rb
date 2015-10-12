@@ -63,7 +63,7 @@ class Bookmarks
       link = dirty_u
 
       # print out title and cleaned url, for autocompetion
-      puts url.id + "_" + name + ":" + link
+      puts url.id + ":" + name + ":" + link
     end
   end
 
