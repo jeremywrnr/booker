@@ -21,7 +21,7 @@ class String
     if self.length >= width
       self[0..width-1]
     else
-      self.ljust(width, '_')
+      self.ljust(width)
     end
   end
 
@@ -45,14 +45,14 @@ class Bookmarks
 
   # output for zsh
   def autocomplete
-    titlewidth = 80
+    width = 80
     @allurls.each do |url|
       # delete anything not allowed in linktitle
       dirty_t = url.title.gsub(/[^a-z0-9\-\/_]/i, '')
       dirty_t = url.folder + dirty_t
       dirty_t = dirty_t.gsub(/\-+/, '-')
       dirty_t = dirty_t.gsub(/ /,'')
-      name = dirty_t
+      name = dirty_t.window(width)
 
       # remove strange things from any linkurls
       dirty_u = url.url.gsub(/[,'"&?].*/, '')
@@ -60,7 +60,7 @@ class Bookmarks
       dirty_u = dirty_u.gsub(/ /,'')
       #right = [url.url.length, COLWIDTH-titlewidth].max
       #link = dirty_u[0..right-1]
-      link = dirty_u
+      link = dirty_u[0..width]
 
       # print out title and cleaned url, for autocompetion
       puts url.id + ":" + name + ":" + link

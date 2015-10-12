@@ -25,16 +25,17 @@ _web_bookmarks() {
         local -a split
         split=("${(@s/:/)bookmark}")
         ids+=( $split[1] )
-        links+=("$split[2] $BLUE/$split[3]$RESET")
+        links+=("$split[2] $BLUE$split[3]$RESET")
     done
 
     #finally, add completions
-    #echo $curcontext
-    #echo $opt_args
     compstate[insert]=menu
     compadd -U -l -X 'found chrome bookmarks:' -d links -a ids
-    #compadd -X 'found chrome bookmarks:' "$links[@]" - "$ids[@]"
 
+    #writing zsh completion so much :(
+    #echo $curcontext
+    #echo $opt_args
+    #compadd -X 'found chrome bookmarks:' "$links[@]" - "$ids[@]"
 }
 
 
