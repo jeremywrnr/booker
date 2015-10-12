@@ -5,9 +5,9 @@ describe Booker do
     @booker = Booker.new
   end
 
-  def run_booker(commits, minutes)
+  def run_booker()
   end
 
-  it "recognize json file" do
+  it "recognizes json file" do
   end
 end
