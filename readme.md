@@ -1,7 +1,6 @@
 cli google chrome bookmark parser
 =================================
 
-
 This is a tool that allows you to tab complete (in zsh only) google chrome (gc)
 bookmarks, and then open them in the browser of your choice. gc stores the
 users bookmarks in a large json file locally, so this can be read/parsed by the
@@ -26,7 +25,8 @@ spent trying to figure out how to cycle through different matches...
 - actually implement testing with rspec
 - packaging for a gem - whatis?
 - updating travis.yml to do things
-
+- config: browser, user, search
+- make completion script read
 
 
 ## autcompletion
