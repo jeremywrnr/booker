@@ -4,7 +4,9 @@
 
 require "rubygems"
 require "json"
+
 require_relative "folder"
+require_relative "config"
 
 
 # get the width of the current terminal # [columns, lines]
@@ -33,10 +35,11 @@ end
 
 
 class Bookmarks
-  LOCAL_BOOKMARKS = "/Library/Application Support/Google/Chrome/Profile 1/bookmarks"
+  extend Config
+  LOCAL_BOOKMARKS = Config.bookmarks
+  p LOCAL_BOOKMARKS
   RAW_JSON_BOOKMARKS = JSON.parse(open(ENV['HOME'] + LOCAL_BOOKMARKS).read)
   CHROME_BOOKMARKS = RAW_JSON_BOOKMARKS['roots']['bookmark_bar']['children']
-
   def initialize(search_term)
     @searching = /#{search_term}/i
     @allurls = []

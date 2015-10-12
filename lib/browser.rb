@@ -24,7 +24,7 @@ module Browser
       '/cygdrive/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe '
     elsif OS.mac?
       'open -a "Google Chrome" '
-    elsif OS.linix?
+    elsif OS.linux?
       'xdg-open ' # completely guessing here
     end
   end
