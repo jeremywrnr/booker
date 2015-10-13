@@ -1,0 +1,6 @@
+source 'https://rubygems.org'
+gem 'yaml'
+gem 'json'
+gem 'rake'
+gem 'rspec-mocks'
+gem 'rspec', :require => 'spec'
