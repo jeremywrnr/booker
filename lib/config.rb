@@ -1,36 +1,49 @@
+# configuation - get where local bookmarks are
+
+
 require 'yaml'
-require 'logger'
 
-module Config
-  # Configure through yaml file
-  def Config.configure
 
-    # Configuration defaults
-    config = {
-      :bookmarks => "/Library/Application Support/Google/Chrome/Profile 1/bookmarks"
-    }
+# thx danhassin
+class String
+  def colorize(color, mod)
+    "\033[#{mod};#{color};49m#{self}\033[0;0m"
+  end
 
-    valid = config.keys
+  def reset() colorize(0,0) end
+  def blu() colorize(34,0) end
+  def yel() colorize(33,0) end
+  def grn() colorize(32,0) end
+  def red() colorize(31,0) end
+end
+
+
+module BookerConfig
+  def BookerConfig.configure
+    # Configure through yaml file
     yaml_config = ENV['HOME'] + '/.booker.yml'
 
+    # Configuration defaults (for osx, default chrome profile)
+    config = { :bookmarks => ENV['HOME'] + "/Library/Application Support/Google/Chrome/Profile 1/bookmarks" }
+    valid = config.keys
+
     begin
-      log =Logger.new(STDOUT)
       config = YAML::load(IO.read(yaml_config))
     rescue Errno::ENOENT
-      log.warn("YAML configuration file couldn't be found. Using defaults.")
+      puts "Warning: ".yel + "YAML configuration file couldn't be found. Using defaults."
+      puts "Suggest: ".grn + "web --findbookmarks"
     rescue Psych::SyntaxError
-      log.warn("YAML configuration file contains invalid syntax. Using defaults.")
+      puts "Warning: ".red + "YAML configuration file contains invalid syntax. Using defaults."
     end
 
     config.each do |k,v|
       config[k.to_sym] = v if valid.include? k.to_sym
     end
 
-    p config
     config
   end
 
-  def Config.bookmarks
-    Config.configure[:bookmarks]
+  def BookerConfig.bookmarks
+    BookerConfig.configure[:bookmarks]
   end
 end
