@@ -27,7 +27,6 @@ class Booker
       exit 0
     end
 
-
     # doing forced bookmarking
     if args[0] == "--bookmark" or args[0] == "-b"
       bm = Bookmarks.new('')
@@ -38,7 +37,6 @@ class Booker
       exit 0
     end
 
-
     # doing forced searching
     if args[0] == "--search" or args[0] == "-s"
       args.shift # remove flag
@@ -46,7 +44,6 @@ class Booker
       exec browse << search << allargs
       exit 0
     end
-
 
     # interpret
     while args do

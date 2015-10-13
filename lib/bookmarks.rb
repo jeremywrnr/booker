@@ -18,8 +18,13 @@ end
 
 class Bookmarks
   extend BookerConfig
-  LOCAL_BOOKMARKS = JSON.parse(open(BookerConfig.bookmarks).read)
-  CHROME_BOOKMARKS = LOCAL_BOOKMARKS['roots']['bookmark_bar']['children']
+  # try to read bookmarks
+  begin
+    LOCAL_BOOKMARKS = JSON.parse(open(BookerConfig.bookmarks).read)
+    CHROME_BOOKMARKS = LOCAL_BOOKMARKS['roots']['bookmark_bar']['children']
+  rescue
+    CHROME_BOOKMARKS = {}
+  end
 
   def initialize(search_term)
     @searching = /#{search_term}/i
@@ -32,23 +37,19 @@ class Bookmarks
     width = 80
     @allurls.each do |url|
       # delete anything not allowed in linktitle
-      dirty_t = url.title.gsub(/[^a-z0-9\-\/_]/i, '')
-      dirty_t = url.folder + dirty_t
-      dirty_t = dirty_t.gsub(/\-+/, '-')
-      dirty_t = dirty_t.gsub(/ /,'')
-      name = dirty_t.window(width)
+      name = url.folder + url.title.gsub(/[^a-z0-9\-\/_]/i, '')
+      name.gsub!(/\-+/, '-').gsub!(/ /,'')
+      name = name.window(width)
 
       # remove strange things from any linkurls
-      dirty_u = url.url.gsub(/[,'"&?].*/, '')
-      dirty_u = dirty_u.gsub(/.*:\/+/,'')
-      dirty_u = dirty_u.gsub(/ /,'')
+      link = url.url.gsub(/[,'"&?].*/, '')
+      link.gsub!(/.*:\/+/,'').gsub!(/ /,'')
       link = dirty_u[0..width]
 
       # print out title and cleaned url, for autocompetion
       puts url.id + ":" + name + ":" + link
     end
   end
-
 
   # parse a bookmark's id from tab completed form
   def bookmark_id(url)
