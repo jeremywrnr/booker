@@ -40,7 +40,6 @@ module Browser
   end
 
   # helper methods
-
   def prep(url)
     if /^http/.match(url)
       url

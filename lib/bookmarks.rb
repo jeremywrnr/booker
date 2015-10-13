@@ -1,24 +1,11 @@
-# grab bookmarks from json file on computer - this may need to be changed based
-# on operating system as well
+# grab/parse bookmarks from json file on computer
 
 
-require "rubygems"
 require "json"
-
-require_relative "folder"
 require_relative "config"
 
 
-# get the width of the current terminal # [columns, lines]
-#require "highline"
-#COLWIDTH = HighLine::SystemExtensions.terminal_size[0]
-
-# thx danhassin
 class String
-  def colorize(color, mod)
-    "\033[#{mod};#{color};49m#{self}\033[0;0m"
-  end
-
   def window(width)
     if self.length >= width
       self[0..width-1]
@@ -26,20 +13,14 @@ class String
       self.ljust(width)
     end
   end
-
-  def reset() colorize(0,0) end
-  def white() colorize(37,1) end
-  def green() colorize(32,0) end
-  def blue() colorize(34,0) end
 end
 
 
 class Bookmarks
-  extend Config
-  LOCAL_BOOKMARKS = Config.bookmarks
-  p LOCAL_BOOKMARKS
-  RAW_JSON_BOOKMARKS = JSON.parse(open(ENV['HOME'] + LOCAL_BOOKMARKS).read)
-  CHROME_BOOKMARKS = RAW_JSON_BOOKMARKS['roots']['bookmark_bar']['children']
+  extend BookerConfig
+  LOCAL_BOOKMARKS = JSON.parse(open(BookerConfig.bookmarks).read)
+  CHROME_BOOKMARKS = LOCAL_BOOKMARKS['roots']['bookmark_bar']['children']
+
   def initialize(search_term)
     @searching = /#{search_term}/i
     @allurls = []
@@ -61,8 +42,6 @@ class Bookmarks
       dirty_u = url.url.gsub(/[,'"&?].*/, '')
       dirty_u = dirty_u.gsub(/.*:\/+/,'')
       dirty_u = dirty_u.gsub(/ /,'')
-      #right = [url.url.length, COLWIDTH-titlewidth].max
-      #link = dirty_u[0..right-1]
       link = dirty_u[0..width]
 
       # print out title and cleaned url, for autocompetion
@@ -117,9 +96,23 @@ class Bookmarks
   end
 end
 
-# just hold data
+
+# basic folder class, for parsing bookmarks
+class Folder
+  include Enumerable
+  def initialize(title='/', json)
+    @title = title.gsub(/[: ,'"]/, '-').downcase
+    @json = json
+  end
+
+  def title() @title end
+  def json() @json end
+  def each() @json.each end
+end
+
+
+# clean bookmark title, set attrs
 class Bookmark
-  # clean bookmark title, set attrs
   def initialize(f, t, u, id)
     @title = t.gsub(/[: ,'"+\-]/, '_').downcase
     @folder = f
@@ -127,19 +120,8 @@ class Bookmark
     @id = id
   end
 
-  def folder
-    @folder
-  end
-
-  def title
-    @title
-  end
-
-  def id
-    @id
-  end
-
-  def url
-    @url
-  end
+  def folder() @folder end
+  def title() @title end
+  def url() @url end
+  def id() @id end
 end
