@@ -13,5 +13,5 @@ Gem::Specification.new do |g|
   g.executables = ['web']
   g.add_development_dependency    "rspec", [">= 0"]
   g.files       = ['lib/booker.rb', 'lib/bookmarks.rb',
-                   'lib/browser.rb', 'lib/folder.rb']
+                   'lib/browser.rb', 'lib/config.rb']
 end
