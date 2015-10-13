@@ -1,12 +1,19 @@
 cli google chrome bookmark parser
 =================================
 
+
 ## installing
 
     $ [sudo] gem install booker
 
-## about
 
+## autcompletion
+To load or reload the web completion script, run this command in `/completion`:
+
+    $ make && unfunction _web && autoload -U _web
+
+
+## about
 This is a tool that allows you to tab complete (in zsh only) google chrome (gc)
 bookmarks, and then open them in the browser of your choice. gc stores the
 users bookmarks in a large json file locally, so this can be read/parsed by the
@@ -25,19 +32,8 @@ spent trying to figure out how to cycle through different matches...
 
 
 ## todo
-
-- refactor autocompletion so that the title is
-    min(terminal width, max(message lengths))
-- actually implement testing with rspec
-- packaging for a gem - whatis?
-- updating travis.yml to do things
+- refactor so title is min(terminal width, max(message lengths))
+- ~~make completion script read on gem install~~
+- add option for dumping completion script, user can route to `$FPATH/_web`
+- implement more testing with rspec
 - config: browser, user, search
-- make completion script read
-
-
-## autcompletion
-
-To load or reload the web completion script, run this command in `/completion`:
-
-    make && unfunction _web && autoload -U _web
-
