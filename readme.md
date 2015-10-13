@@ -1,6 +1,8 @@
 cli google chrome bookmark parser
 =================================
 
+[![Build Status](https://travis-ci.org/jeremywrnr/boooker.png)](https://travis-ci.org/jeremywrnr/booker)
+[![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://josh.mit-license.org)
 
 ## installing
 
