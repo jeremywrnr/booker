@@ -47,6 +47,8 @@ spent trying to figure out how to cycle through different matches...
 - refactor so title is min(terminal width, max(message lengths))
 - ~~make completion script read on gem install~~
 - add option for dumping completion script, user can route to `$FPATH/_web`
+- check for bookmarks only when searching through them (less errors, none on
+  install, of the completion script for example)
 - make an option to run a script, that deletes itself after installing
   completion
 - implement more testing with rspec
