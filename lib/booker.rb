@@ -12,12 +12,6 @@ class Booker
     parse args
   end
 
-  def install(args)
-      # TODO bookmarks installation
-      puts COMPLETION # from consts.rb
-      # TODO zsh installation
-  end
-
   def parse(args)
     if args.none? # no args given, show help
       puts HELP_BANNER # from consts.rb
@@ -79,6 +73,18 @@ class Booker
         exec browse << search << allargs
 
       end
+    end
+  end
+
+  def install(args)
+    # TODO bookmarks installation
+
+    # determine where to install function
+    fpath = `zsh -c 'echo $fpath'`.split(' ')[-1]
+    if fpath
+      File.open(fpath + "/_web", 'w') {|f| f.write(COMPLETION) }
+    else
+      puts "web zsh completion error, could not write script to $fpath"
     end
   end
 end

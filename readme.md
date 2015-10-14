@@ -9,12 +9,12 @@ cli google chrome bookmark parser
     $ [sudo] gem install booker
 
 
-## locating bookmarks
+#### locating bookmarks
 
     $ web --install bookmarks
 
 
-## autocompletion
+#### autocompletion
 To install tab completion for zsh, you can run this:
 
     $ web --install zsh
