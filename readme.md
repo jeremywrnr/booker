@@ -9,8 +9,18 @@ cli google chrome bookmark parser
     $ [sudo] gem install booker
 
 
-## autcompletion
-To load or reload the web completion script, run this command in `/completion`:
+## locating bookmarks
+
+    $ web --install bookmarks
+
+
+## autocompletion
+To install tab completion for zsh, you can run this:
+
+    $ web --install zsh
+
+To develop the zsh completion script, you can run clone this repo, and run
+this command in `/completion`:
 
     $ make && unfunction _web && autoload -U _web
 
@@ -37,5 +47,7 @@ spent trying to figure out how to cycle through different matches...
 - refactor so title is min(terminal width, max(message lengths))
 - ~~make completion script read on gem install~~
 - add option for dumping completion script, user can route to `$FPATH/_web`
+- make an option to run a script, that deletes itself after installing
+  completion
 - implement more testing with rspec
 - config: browser, user, search

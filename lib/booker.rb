@@ -1,8 +1,8 @@
 # parse command line args
 
 
-require_relative 'bookmarks'
 require_relative 'browser'
+require_relative 'bookmarks'
 
 
 # get web opening command
@@ -12,10 +12,23 @@ class Booker
     parse args
   end
 
+  def install(args)
+      # TODO bookmarks installation
+      puts COMPLETION # from consts.rb
+      # TODO zsh installation
+  end
+
   def parse(args)
     if args.none? # no args given, show help
-      puts HELP_BANNER
+      puts HELP_BANNER # from consts.rb
       exit 1
+    end
+
+    # doing installation
+    if args[0] == "--install"
+      args.shift # remove flag
+      install(args)
+      exit 0
     end
 
     # doing autocompletion

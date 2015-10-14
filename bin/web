@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 
+require_relative "../lib/consts"
 require_relative "../lib/booker"
 
 
@@ -10,14 +11,6 @@ require_relative "../lib/booker"
 
 
 VERSION = "0.1"
-HELP_BANNER = <<-EOS
-Open browser:
-    $ web [options]
-Options:
-    --bookmark, -b: explicity open bookmark
-      --search, -s: explicity open search
-        --complete: show completions
-EOS
 
 
 Booker.new(ARGV)

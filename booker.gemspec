@@ -11,7 +11,8 @@ Gem::Specification.new do |g|
   g.email       = ['jeremywrnr@gmail.com']
 
   g.executables = ['web']
-  g.add_development_dependency    "rspec", [">= 0"]
+  g.add_development_dependency    "rspec", ["~> 0"]
   g.files       = ['lib/booker.rb', 'lib/bookmarks.rb',
-                   'lib/browser.rb', 'lib/config.rb']
+                   'lib/browser.rb', 'lib/config.rb',
+                   'lib/consts.rb']
 end
