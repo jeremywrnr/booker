@@ -95,10 +95,10 @@ class BConfig
   end
 
   def bookmarks
-    @config[:bookmarks]
+    @config['bookmarks']
   end
 
   def searcher
-    @config[:searcher]
+    @config['searcher']
   end
 end
