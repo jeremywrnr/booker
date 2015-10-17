@@ -48,4 +48,5 @@ spent trying to figure out how to cycle through different matches...
 - refactor so title is min(terminal width, max(message lengths))
 - make an option to run a script, that deletes itself after installing comp?
 - implement more testing with rspec
+- add completion for -i/--install
 - config: browser
