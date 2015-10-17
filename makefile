@@ -8,7 +8,7 @@ clean:
 	rm booker-$(v).gem
 
 push: clean build
-	gem push booker-$(v)
+	gem push booker-$(v).gem
 
 dev:
 	filewatcher '**/*' 'clear && rake'
