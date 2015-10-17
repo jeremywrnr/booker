@@ -4,9 +4,9 @@
 VERSION = "0.2"
 
 
-require 'bookmarks'
-require 'config'
-require 'consts'
+require_relative 'bookmarks'
+require_relative 'config'
+require_relative 'consts'
 
 
 # get web opening command
@@ -16,10 +16,14 @@ class Booker
     parse args
   end
 
+  def pexit(msg, sig)
+    puts msg
+    exit sig
+  end
+
   def parse(args)
     if args.none? # no args given, show help
-      puts HELP_BANNER # from consts.rb
-      exit 1
+      pext HELP_BANNER 1
     end
 
     # if arg starts with hyphen, parse option
@@ -55,27 +59,16 @@ class Booker
     --complete -c --bookmark -b --search -s}
 
     nextarg = args[0]
-    if ! (valid_opts.include? nextarg)
-      puts "Error: ".red +
-        "unrecognized option #{nextarg}"
-      exit 1
-    end
+    errormsg = "Error: ".red + "unrecognized option #{nextarg}"
+    pexit errormsg 1 if ! (valid_opts.include? nextarg)
 
-    # print version information
-    if args[0] == "--version" or args[0] == "-v"
-      puts VERSION
+    # doing forced bookmarking
+    if args[0] == "--bookmark" or args[0] == "-b"
+      bm = Bookmarks.new('')
+      url = bm.bookmark_url(args[1])
+      puts 'opening ' + url + '...'
+      exec browse << wrap(url)
       exit 0
-    end
-
-    # doing installation
-    if args[0] == "--install" or args[0] == "-i"
-      args.shift # remove flag
-      if args.length > 0
-        install(args)
-      else
-        puts "--install expects arguments: [completion, bookmarks, config]"
-        exit 1
-      end
     end
 
     # doing autocompletion
@@ -87,13 +80,14 @@ class Booker
       exit 0
     end
 
-    # doing forced bookmarking
-    if args[0] == "--bookmark" or args[0] == "-b"
-      bm = Bookmarks.new('')
-      url = bm.bookmark_url(args[1])
-      puts 'opening ' + url + '...'
-      exec browse << wrap(url)
-      exit 0
+    # doing installation
+    if args[0] == "--install" or args[0] == "-i"
+      args.shift # remove flag
+      if args.length > 0
+        install(args)
+      else
+        pexit("--install expects arguments: [completion, bookmarks, config]", 1)
+      end
     end
 
     # doing forced searching
@@ -103,6 +97,11 @@ class Booker
       search = BConfig.new.searcher
       exec browse << search << allargs
       exit 0
+    end
+
+    # print version information
+    if args[0] == "--version" or args[0] == "-v"
+      pexit VERSION 0
     end
   end
 
@@ -124,14 +123,12 @@ class Booker
     elsif target.match("bookmarks") # bookmarks installation
       # locate bookmarks file, show user, write to config?
       puts 'searching for bookmarks...'
-      potential = `find ~ -iname '*bookmarks' | grep -i chrom`
-      puts potential
+      puts `find ~ -iname '*bookmarks' | grep -i chrom`
     elsif target.match("config") # default config file generation
       yaml_config = ENV['HOME'] + '/.booker.yml'
       File.open(fpath + "/_web", 'w') {|f| f.write(DEF_CONFIG) }
     else # unknown argument passed into install
-      puts "ZSH completion error: could not write _web script to $fpath"
-      exit 1
+      pexit "Unknown installation option: " + target, 1
     end
 
     install(args) # recurse til done

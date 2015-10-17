@@ -2,7 +2,6 @@
 
 
 require 'json'
-require 'config'
 
 
 TERMWIDTH = 80
@@ -30,10 +29,9 @@ end
 
 
 class Bookmarks
+  # try to read bookmarks
   def initialize(search_term)
-    # try to read bookmarks
     @conf = BConfig.new
-    p @conf.bookmarks
     begin
       local_bookmarks = JSON.parse(open(@conf.bookmarks).read)
       @chrome_bookmarks = local_bookmarks['roots']['bookmark_bar']['children']
@@ -57,13 +55,15 @@ class Bookmarks
     @allurls.each do |url|
       # delete anything not allowed in linktitle
       name = url.folder + url.title.gsub(/[^a-z0-9\-\/_]/i, '')
-      name.gsub!(/\-+/, '-').gsub!(/ /,'')
+      name.gsub!(/\-+/, '-')
+      name.gsub!(/ /,'')
       name = name.window(TERMWIDTH)
 
       # remove strange things from any linkurls
       link = url.url.gsub(/[,'"&?].*/, '')
-      link.gsub!(/.*:\/+/,'').gsub!(/ /,'')
-      link = dirty_u[0..TERMWIDTH]
+      link.gsub!(/.*:\/+/,'')
+      link.gsub!(/ /,'')
+      link = link[0..TERMWIDTH]
 
       # print out title and cleaned url, for autocompetion
       puts url.id + ":" + name + ":" + link
