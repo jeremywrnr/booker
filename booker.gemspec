@@ -16,9 +16,7 @@ Gem::Specification.new do |g|
   g.email       = 'jeremywrnr@gmail.com'
   g.executables = ['web']
   g.files       = ['lib/booker.rb', 'lib/bookmarks.rb',
-                   'lib/browser.rb', 'lib/config.rb',
-                   'lib/consts.rb']
-  g.add_runtime_dependency     'yaml',  '>= 1.0.0'
+                   'lib/config.rb', 'lib/consts.rb']
   g.add_runtime_dependency     'json',  '>= 1.8.1'
   g.add_development_dependency 'rspec', '>= 3.3.2'
   g.post_install_message = <<-EOF
