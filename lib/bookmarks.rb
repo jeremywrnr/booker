@@ -1,8 +1,11 @@
 # grab/parse bookmarks from json file on computer
 
 
-require "json"
-require_relative "config"
+require 'json'
+require 'config'
+
+
+TERMWIDTH = 80
 
 
 class String
@@ -17,12 +20,15 @@ end
 
 
 class Bookmarks
-  extend BookerConfig
+  conf = BConfig.new
+  p 'bookmarks at: ' + conf.bookmarks
+
   # try to read bookmarks
   begin
-    LOCAL_BOOKMARKS = JSON.parse(open(BookerConfig.bookmarks).read)
+    LOCAL_BOOKMARKS = JSON.parse(open(BConfig.bookmarks).read)
     CHROME_BOOKMARKS = LOCAL_BOOKMARKS['roots']['bookmark_bar']['children']
   rescue
+    puts "JSON Bookmarks folder not found"
     CHROME_BOOKMARKS = {}
   end
 
@@ -32,19 +38,19 @@ class Bookmarks
     parse
   end
 
+
   # output for zsh
   def autocomplete
-    width = 80
     @allurls.each do |url|
       # delete anything not allowed in linktitle
       name = url.folder + url.title.gsub(/[^a-z0-9\-\/_]/i, '')
       name.gsub!(/\-+/, '-').gsub!(/ /,'')
-      name = name.window(width)
+      name = name.window(TERMWIDTH)
 
       # remove strange things from any linkurls
       link = url.url.gsub(/[,'"&?].*/, '')
       link.gsub!(/.*:\/+/,'').gsub!(/ /,'')
-      link = dirty_u[0..width]
+      link = dirty_u[0..TERMWIDTH]
 
       # print out title and cleaned url, for autocompetion
       puts url.id + ":" + name + ":" + link

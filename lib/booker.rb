@@ -1,13 +1,12 @@
 # parse command line args
 
 
-require_relative 'browser'
+require_relative 'config'
 require_relative 'bookmarks'
 
 
 # get web opening command
 class Booker
-  include Browser
   def initialize(args)
     parse args
   end
@@ -80,11 +79,11 @@ class Booker
     # TODO bookmarks installation
 
     # determine where to install function
-    fpath = `zsh -c 'echo $fpath'`.split(' ')[-1]
+    fpath = `zsh -c 'echo $fpath'`.split(' ')[0]
     if fpath
       File.open(fpath + "/_web", 'w') {|f| f.write(COMPLETION) }
     else
-      puts "web zsh completion error, could not write script to $fpath"
+      puts "web zsh completion error, could not write _web script to $fpath"
     end
   end
 end
