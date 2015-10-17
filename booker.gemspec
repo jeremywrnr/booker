@@ -21,7 +21,7 @@ Gem::Specification.new do |g|
   g.add_development_dependency 'rspec', '~> 3.3', '>= 3.3.2'
   g.post_install_message = <<-EOF
     Thank you for installing booker!
-    To add zsh completion, run `web --install`
-    To set bookmarks location, run `web --install`
+    To set bookmarks location, run `web --install bookmarks`
+    To add zsh completion, run `web --install completion`
   EOF
 end
