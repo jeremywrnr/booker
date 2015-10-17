@@ -73,7 +73,9 @@ class Bookmarks
   # get link (from id number)
   def bookmark_url(id)
     @allurls.each do |url|
-      return url.url if id == url.id
+      if id == url.id
+        return url.url
+      end
     end
   end
 

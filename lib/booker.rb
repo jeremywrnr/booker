@@ -23,7 +23,7 @@ class Booker
 
   def parse(args)
     if args.none? # no args given, show help
-      pext HELP_BANNER 1
+      pexit HELP_BANNER, 1
     end
 
     # if arg starts with hyphen, parse option
@@ -60,15 +60,21 @@ class Booker
 
     nextarg = args[0]
     errormsg = "Error: ".red + "unrecognized option #{nextarg}"
-    pexit errormsg 1 if ! (valid_opts.include? nextarg)
+    pexit errormsg, 1 if ! (valid_opts.include? nextarg)
 
     # doing forced bookmarking
     if args[0] == "--bookmark" or args[0] == "-b"
       bm = Bookmarks.new('')
-      url = bm.bookmark_url(args[1])
-      puts 'opening ' + url + '...'
-      exec browse << wrap(url)
-      exit 0
+      id = args[1]
+      if id
+        url = bm.bookmark_url(id)
+        puts 'opening ' + url + '...'
+        exec browse << wrap(url)
+        exit 0
+      else
+        pexit '  Error: '.red +
+          'web --bookmark expects bookmark id', 1
+      end
     end
 
     # doing autocompletion
@@ -86,22 +92,28 @@ class Booker
       if args.length > 0
         install(args)
       else
-        pexit("--install expects arguments: [completion, bookmarks, config]", 1)
+        pexit '  Error: '.red +
+          "web --install expects arguments: [completion, bookmarks, config]", 1
       end
     end
 
     # doing forced searching
     if args[0] == "--search" or args[0] == "-s"
       args.shift # remove flag
-      puts 'searching ' + allargs + '...'
-      search = BConfig.new.searcher
-      exec browse << search << allargs
-      exit 0
+      allargs = args.join(' ')
+      if allargs == ""
+        pexit "--search requires an argument", 1
+      else
+        puts 'searching ' + allargs + '...'
+        search = BConfig.new.searcher
+        exec browse << search << allargs
+        exit 0
+      end
     end
 
     # print version information
     if args[0] == "--version" or args[0] == "-v"
-      pexit VERSION 0
+      pexit VERSION, 0
     end
   end
 
