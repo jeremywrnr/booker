@@ -65,14 +65,21 @@ _web() {
     local curcontext state line
     typeset -A opt_args
     _arguments\
-        '(--search)--search[search google for...]'\
+        '(-b)-b[do bookmark completion]'\
+        '(--bookmark)--bookmark[do bookmark completion]'\
+        '(-c)-c[show bookmark completions]'\
+        '(--complete)--complete[show bookmark completions]'\
+        '(-i)-i[perform installations (bookmarks, completion, config)]'\
+        '(--install)--install[perform installations (bookmarks, completion, config)]'\
         '(-s)-s[search google for...]'\
-        '(--bookmark)--bookmark[bookmark completion]'\
-        '(-b)-b[bookmark completion]'\
+        '(--search)--search[search google for...]'\
+        '(-h)-h[show web help]'\
+        '(--help)--help[show web help]'\
+        '(-v)-v[show version]'\
+        '(--version)--version[show version]'\
         '*::bookmarks:->bookmarks' && return 0
 
-    bm_query=$words
-    _web_bookmarks $bm_query
+    _web_bookmarks $words
 }
 
 
