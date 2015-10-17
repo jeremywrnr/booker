@@ -16,23 +16,36 @@ class String
       self.ljust(width)
     end
   end
+
+  def colorize(color, mod)
+    "\033[#{mod};#{color};49m#{self}\033[0;0m"
+  end
+
+  def reset() colorize(0,0) end
+  def blu() colorize(34,0) end
+  def yel() colorize(33,0) end
+  def grn() colorize(32,0) end
+  def red() colorize(31,0) end
 end
 
 
 class Bookmarks
-  conf = BConfig.new
-  p 'bookmarks at: ' + conf.bookmarks
-
-  # try to read bookmarks
-  begin
-    LOCAL_BOOKMARKS = JSON.parse(open(BConfig.bookmarks).read)
-    CHROME_BOOKMARKS = LOCAL_BOOKMARKS['roots']['bookmark_bar']['children']
-  rescue
-    puts "JSON Bookmarks folder not found"
-    CHROME_BOOKMARKS = {}
-  end
-
   def initialize(search_term)
+    # try to read bookmarks
+    @conf = BConfig.new
+    p @conf.bookmarks
+    begin
+      local_bookmarks = JSON.parse(open(@conf.bookmarks).read)
+      @chrome_bookmarks = local_bookmarks['roots']['bookmark_bar']['children']
+    rescue
+      puts "Warning: ".yel +
+        "Chrome JSON Bookmarks not found."
+      puts "Suggest: ".grn +
+        "web --install bookmarks"
+      @chrome_bookmarks = {}
+    end
+
+    # clean search term, set urls
     @searching = /#{search_term}/i
     @allurls = []
     parse
@@ -57,24 +70,17 @@ class Bookmarks
     end
   end
 
-  # parse a bookmark's id from tab completed form
-  def bookmark_id(url)
-    url[0..5].gsub(/[^0-9]/, '')
-  end
-
   # get link (from id number)
   def bookmark_url(id)
-    bm_url = ''
     @allurls.each do |url|
-      bm_url = url.url if id == url.id
+      return url.url if id == url.id
     end
-    bm_url
   end
 
   # recursively parse gc bookmarks
   def parse(root=nil)
     # root - parent folder in ruby
-    root = Folder.new CHROME_BOOKMARKS if root.nil?
+    root = Folder.new @chrome_bookmarks if root.nil?
 
     # all current urls, to hash
     root.json.each {|x| parse_link root.title, x }
@@ -101,10 +107,10 @@ class Bookmarks
       parse(subdir)
     end
   end
-end
+end # close bookmarks class
 
 
-# basic folder class, for parsing bookmarks
+# for recursively parsing bookmarks
 class Folder
   include Enumerable
   def initialize(title='/', json)
@@ -112,8 +118,8 @@ class Folder
     @json = json
   end
 
-  def title() @title end
   def json() @json end
+  def title() @title end
   def each() @json.each end
 end
 

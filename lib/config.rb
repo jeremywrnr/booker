@@ -68,16 +68,15 @@ end
 
 # high level configuration
 class BConfig
-  include Browser
   def initialize
-    # Config defaults (for osx, default chrome profile)
+    # config defaults (for osx, default chrome profile)
     @config = {
       :searcher  => "https://duckduckgo.com/?q=",
       :bookmarks => ENV['HOME'] +
-      "/Library/Application Support/Google/Chrome/Profile 1/bookmarks",
+      "/Library/Application Support/Google/Chrome/Profile 1/Bookmarks",
     }
 
-    # Configure through yaml file
+    # configure through users yaml config file
     yaml_config = ENV['HOME'] + '/.booker.yml'
 
     begin
@@ -86,7 +85,7 @@ class BConfig
       puts "Warning: ".yel +
         "YAML configuration file couldn't be found. Using defaults."
       puts "Suggest: ".grn +
-        "web --findbookmarks"
+        "web --install config"
     rescue Psych::SyntaxError
       puts "Warning: ".red +
         "YAML configuration file contains invalid syntax. Using defaults."

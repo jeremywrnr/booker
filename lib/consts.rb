@@ -11,6 +11,12 @@ Options:
 EOS
 
 
+DEF_CONFIG = <<-EOS
+bookmarks: <run web --install bookmarks>
+searcher:  https://duckduckgo.com/?q=
+EOS
+
+
 COMPLETION = <<-EOS
 #compdef web
 #autoload
