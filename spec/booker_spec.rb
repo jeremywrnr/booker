@@ -14,6 +14,8 @@ describe Booker do
   end
 
   it "should refute unrecognized flags" do
+    expect { run("-goo?-gaah??''") }.to raise_error SystemExit
+    expect { run("-world -goo?") }.to raise_error SystemExit
     expect { run("--hello") }.to raise_error SystemExit
   end
 
