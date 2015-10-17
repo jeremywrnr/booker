@@ -18,7 +18,7 @@ cli google chrome bookmark parser
 #### autocompletion
 To install tab completion for zsh, you can run this:
 
-    $ web --install zsh
+    $ web --install completion
 
 To develop the zsh completion script, you can run clone this repo, and run
 this command in `/completion`:
@@ -46,11 +46,6 @@ spent trying to figure out how to cycle through different matches...
 
 ## todo
 - refactor so title is min(terminal width, max(message lengths))
-- ~~make completion script read on gem install~~
-- add option for dumping completion script, user can route to `$FPATH/_web`
-- check for bookmarks only when searching through them (less errors, none on
-  install, of the completion script for example)
-- make an option to run a script, that deletes itself after installing
-  completion
+- make an option to run a script, that deletes itself after installing comp?
 - implement more testing with rspec
-- config: browser, user, search
+- config: browser
