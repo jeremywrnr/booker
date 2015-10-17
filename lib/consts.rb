@@ -4,12 +4,16 @@
 HELP_BANNER = <<-EOS
 Open browser:
     $ web [option] [arguments]
-Options:
+
+Main options:
     --bookmark, -b: explicity open bookmark
-    --complete, -c: show tab completions
      --install, -i: install [bookmarks, completion, config]
-      --search, -s: explicity search
+      --search, -s: explicity search arguments
+
+Others:
+    --complete, -c: show tab completions
      --version, -v: print version
+        --help, -h: show help
 EOS
 
 

@@ -17,7 +17,7 @@ describe Booker do
     expect { run("--hello") }.to raise_error SystemExit
   end
 
-  valid_opts = %w{--version -v --install -i
+  valid_opts = %w{--version -v --install -i --help -h
     --complete -c --bookmark -b --search -s}
   valid_opts.each do |opt|
     it "should accept valid option flags (#{opt})" do

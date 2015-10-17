@@ -18,15 +18,18 @@ class Booker
     parse args
   end
 
+  def helper
+    pexit HELP_BANNER, 1
+  end
+
   def pexit(msg, sig)
     puts msg
     exit sig
   end
 
   def parse(args)
-    if args.none? # no args given, show help
-      pexit HELP_BANNER, 1
-    end
+    # no args given, show help
+    helper if args.none?
 
     # if arg starts with hyphen, parse option
     parse_opt args if /^-.*/.match(args[0])
@@ -57,7 +60,7 @@ class Booker
   end
 
   def parse_opt(args)
-    valid_opts = %w{--version -v --install -i
+    valid_opts = %w{--version -v --install -i --help -h
     --complete -c --bookmark -b --search -s}
 
     nextarg = args[0]
@@ -97,6 +100,11 @@ class Booker
         pexit '  Error: '.red +
           "web --install expects arguments: [completion, bookmarks, config]", 1
       end
+    end
+
+    # needs some help
+    if args[0] == "--help" or args[0] == "-h"
+      helper
     end
 
     # doing forced searching
@@ -155,9 +163,9 @@ class Booker
 
     elsif /config/i.match(target) # default config file generation
       begin
-      BConfig.new.write
-      puts "Success: ".grn +
-        "config file written to ~/.booker"
+        BConfig.new.write
+        puts "Success: ".grn +
+          "config file written to ~/.booker"
       rescue
         puts "Failure: ".red +
           "could not write config file ~/.booker"
