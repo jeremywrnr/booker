@@ -7,6 +7,7 @@ cli google chrome bookmark parser
 ## installing
 
     $ [sudo] gem install booker
+    $ web --install config completion bookmarks
 
 
 #### locating bookmarks

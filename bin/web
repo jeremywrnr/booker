@@ -1,16 +1,12 @@
 #!/usr/bin/env ruby
 
 
-require_relative "../lib/consts"
 require_relative "../lib/booker"
 
 
 # web by jeremy warner
 # open up a website or search in google chrome from cli
 # also show and/or open up google chrome bookmarks
-
-
-VERSION = "0.1"
 
 
 Booker.new(ARGV)
