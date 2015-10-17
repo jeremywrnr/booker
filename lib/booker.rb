@@ -118,27 +118,36 @@ class Booker
   end
 
   def install(args)
-    exit 0 unless args.length
     target = args.shift
+    exit 0 if target.nil?
 
-    if target.match("completion") # completion installation
+      yaml_config = ENV['HOME'] + '/.booker.yml'
 
+    if /complet/i.match(target) # completion installation
       # determine where to install function
       fpath = `zsh -c 'echo $fpath'`.split(' ')[0]
       begin
         File.open(fpath + "/_web", 'w') {|f| f.write(COMPLETION) }
         loaded = `unfunction _web && autoload -U _web`
       rescue
-        puts "ZSH completion error: could not write _web script to $fpath"
+        pexit "ZSH completion error: could not write _web script to $fpath", 1
       end
 
-    elsif target.match("bookmarks") # bookmarks installation
+    elsif /bookmark/i.match(target) # bookmarks installation
       # locate bookmarks file, show user, write to config?
-      puts 'searching for bookmarks...'
-      puts `find ~ -iname '*bookmarks' | grep -i chrom`
-    elsif target.match("config") # default config file generation
-      yaml_config = ENV['HOME'] + '/.booker.yml'
-      File.open(fpath + "/_web", 'w') {|f| f.write(DEF_CONFIG) }
+      puts 'searching for bookmarks folder...'
+      bms = `find ~ -iname '*bookmarks' | grep -i chrom`.split("\n")
+      puts 'select correct bookmarks file: '
+      bms.each_with_index{|bm, i| puts i.to_s + "\t" + bm }
+      selected = gets.chomp
+      begin bms[selected.]
+      open(yaml_config, 'a') { |f| f.write
+
+    elsif /config/i.match(target) # default config file generation
+      File.open(yaml_config, 'w') {|f| f.write(DEF_CONFIG) }
+      puts "Success: ".grn +
+        "config file written to ~/.booker"
+
     else # unknown argument passed into install
       pexit "Unknown installation option: " + target, 1
     end
