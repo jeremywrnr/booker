@@ -10,6 +10,9 @@ clean:
 push: clean build
 	gem push booker-$(v)
 
+dev:
+	filewatcher '**/*' 'clear && rake'
+
 find:
 	@echo seaching for chrome bookmarks json...
 	@find ~ -iname '*bookmarks' | grep -i chrom
