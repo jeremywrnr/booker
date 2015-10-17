@@ -123,9 +123,7 @@ class Booker
     target = args.shift
     exit 0 if target.nil?
 
-    yaml_config = ENV['HOME'] + '/.booker.yml'
-
-    if /complet/i.match(target) # completion installation
+    if /comp/i.match(target) # completion installation
       begin
         # determine where to install function
         fpath = `zsh -c 'echo $fpath'`.split(' ')[0]
@@ -140,26 +138,30 @@ class Booker
 
     elsif /bookmark/i.match(target) # bookmarks installation
       # locate bookmarks file, show user, write to config?
-      puts 'searching for chrome bookmarks...'
+      puts 'searching for chrome bookmarks...(takes time)'
       begin
         bms = `find ~ -iname '*bookmarks' | grep -i chrom`.split("\n")
         puts 'select your bookmarks file: '
         bms.each_with_index{|bm, i| puts i.to_s.grn + " - " + bm }
         selected = bms[gets.chomp.to_i]
-        puts 'selected: ' + selected
-        bmconf = 'bookmarks: ' + selected
-        open(yaml_config, 'a') { |f| f.write bmconf }
+        puts 'Selected: '.yel + selected
+        BConfig.new.write('bookmarks', selected)
         puts "Success: ".grn +
-          "config file updated with bookmarks"
+          "config file updated with your bookmarks"
       rescue
         puts "Failure: ".red +
           "could not add bookmarks to config file ~/.booker"
       end
 
     elsif /config/i.match(target) # default config file generation
-      File.open(yaml_config, 'w') {|f| f.write(DEF_CONFIG) }
+      begin
+      BConfig.new.write
       puts "Success: ".grn +
         "config file written to ~/.booker"
+      rescue
+        puts "Failure: ".red +
+          "could not write config file ~/.booker"
+      end
 
     else # unknown argument passed into install
       pexit "Failure: ".red +

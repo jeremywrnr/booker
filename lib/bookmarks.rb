@@ -4,6 +4,7 @@
 TERMWIDTH = 80
 
 
+# thx danhassin
 class String
   def window(width)
     if self.length >= width

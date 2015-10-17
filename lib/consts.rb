@@ -14,8 +14,8 @@ EOS
 
 
 DEF_CONFIG = <<-EOS
+bookmarks: null
 searcher:  https://duckduckgo.com/?q=
-bookmarks: <run web --install bookmarks>
 EOS
 
 

@@ -1,18 +1,4 @@
-# configuation - get where local bookmarks are
-
-
-# thx danhassin
-class String
-  def colorize(color, mod)
-    "\033[#{mod};#{color};49m#{self}\033[0;0m"
-  end
-
-  def reset() colorize(0,0) end
-  def blu() colorize(34,0) end
-  def yel() colorize(33,0) end
-  def grn() colorize(32,0) end
-  def red() colorize(31,0) end
-end
+# configuation - get where bookmarks are
 
 
 # detect operating system
@@ -65,6 +51,8 @@ end
 
 # high level configuration
 class BConfig
+  YAMLCONF = ENV['HOME'] + '/.booker.yml'
+
   def initialize
     # config defaults (for osx, default chrome profile)
     @config = {
@@ -74,10 +62,17 @@ class BConfig
     }
 
     # configure through users yaml config file
-    yaml_config = ENV['HOME'] + '/.booker.yml'
+    @config = read(YAMLCONF)
 
+    valid = @config.keys
+    @config.each do |k,v|
+      @config[k.to_sym] = v if valid.include? k.to_sym
+    end
+  end
+
+  def read(file)
     begin
-      @config = YAML::load(IO.read(yaml_config))
+      @config = YAML::load(IO.read(file))
     rescue Errno::ENOENT
       puts "Warning: ".yel +
         "YAML configuration file couldn't be found. Using defaults."
@@ -87,10 +82,15 @@ class BConfig
       puts "Warning: ".red +
         "YAML configuration file contains invalid syntax. Using defaults."
     end
+    @config
+  end
 
-    valid = @config.keys
-    @config.each do |k,v|
-      @config[k.to_sym] = v if valid.include? k.to_sym
+  def write(k=nil, v=nil)
+    if k.nil? or v.nil?
+      File.open(YAMLCONF, 'w') {|f| f.write(@config.to_yaml) }
+    else
+      @config[k] = v
+      File.open(YAMLCONF, 'w+') {|f| f.write(@config.to_yaml) }
     end
   end
 
