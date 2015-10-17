@@ -4,6 +4,8 @@
 VERSION = "0.2"
 
 
+require 'yaml'
+require 'json'
 require_relative 'bookmarks'
 require_relative 'config'
 require_relative 'consts'
@@ -121,27 +123,38 @@ class Booker
     target = args.shift
     exit 0 if target.nil?
 
-      yaml_config = ENV['HOME'] + '/.booker.yml'
+    yaml_config = ENV['HOME'] + '/.booker.yml'
 
     if /complet/i.match(target) # completion installation
-      # determine where to install function
-      fpath = `zsh -c 'echo $fpath'`.split(' ')[0]
       begin
+        # determine where to install function
+        fpath = `zsh -c 'echo $fpath'`.split(' ')[0]
         File.open(fpath + "/_web", 'w') {|f| f.write(COMPLETION) }
-        loaded = `unfunction _web && autoload -U _web`
+        loaded = `zsh -c 'autoload -U _web'`
+        puts "Success: ".grn +
+          "installed zsh autocompletion in #{fpath}"
       rescue
-        pexit "ZSH completion error: could not write _web script to $fpath", 1
+        pexit "Failure: ".red +
+          "could not write ZSH completion _web script to $fpath", 1
       end
 
     elsif /bookmark/i.match(target) # bookmarks installation
       # locate bookmarks file, show user, write to config?
-      puts 'searching for bookmarks folder...'
-      bms = `find ~ -iname '*bookmarks' | grep -i chrom`.split("\n")
-      puts 'select correct bookmarks file: '
-      bms.each_with_index{|bm, i| puts i.to_s + "\t" + bm }
-      selected = gets.chomp
-      begin bms[selected.]
-      open(yaml_config, 'a') { |f| f.write
+      puts 'searching for chrome bookmarks...'
+      begin
+        bms = `find ~ -iname '*bookmarks' | grep -i chrom`.split("\n")
+        puts 'select your bookmarks file: '
+        bms.each_with_index{|bm, i| puts i.to_s.grn + " - " + bm }
+        selected = bms[gets.chomp.to_i]
+        puts 'selected: ' + selected
+        bmconf = 'bookmarks: ' + selected
+        open(yaml_config, 'a') { |f| f.write bmconf }
+        puts "Success: ".grn +
+          "config file updated with bookmarks"
+      rescue
+        puts "Failure: ".red +
+          "could not add bookmarks to config file ~/.booker"
+      end
 
     elsif /config/i.match(target) # default config file generation
       File.open(yaml_config, 'w') {|f| f.write(DEF_CONFIG) }
@@ -149,7 +162,8 @@ class Booker
         "config file written to ~/.booker"
 
     else # unknown argument passed into install
-      pexit "Unknown installation option: " + target, 1
+      pexit "Failure: ".red +
+        "unknown installation option (#{target})", 1
     end
 
     install(args) # recurse til done

@@ -1,9 +1,6 @@
 # configuation - get where local bookmarks are
 
 
-require 'yaml'
-
-
 # thx danhassin
 class String
   def colorize(color, mod)

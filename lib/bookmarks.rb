@@ -1,9 +1,6 @@
 # grab/parse bookmarks from json file on computer
 
 
-require 'json'
-
-
 TERMWIDTH = 80
 
 
