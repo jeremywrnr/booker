@@ -1,7 +1,7 @@
 # parse web's command line args
 
 
-VERSION = "0.2"
+VERSION = "0.2.1"
 
 
 require 'yaml'
@@ -41,8 +41,7 @@ class Booker
 
       if /[0-9]/.match(browsearg[0]) # bookmark
         bm = Bookmarks.new('')
-        bookmark = bm.bookmark_id(browsearg)
-        url = bm.bookmark_url(bookmark)
+        url = bm.bookmark_url(browsearg)
         puts 'opening ' + url + '...'
         exec browse << wrap(url)
 
