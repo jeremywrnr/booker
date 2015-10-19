@@ -46,7 +46,8 @@ spent trying to figure out how to cycle through different matches...
 
 ## todo
 - refactor so title is min(terminal width, max(message lengths))
-- make an option to run a script, that deletes itself after installing comp?
+- make use of internal find rather than parsing syscalls
+- try to write in all fpath locations if one fails
 - implement more testing with rspec
+- config: browser selection command
 - add completion for -i/--install
-- config: browser
