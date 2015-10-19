@@ -149,7 +149,7 @@ class Booker
             "could not write ZSH completion _web script to $fpath"
         end
       end
-      exec "zsh -c 'autoload -U _web'"
+      system "zsh -c 'autoload -U _web'"
       puts "Success: ".grn +
         "installed zsh autocompletion in #{fpath}"
 
