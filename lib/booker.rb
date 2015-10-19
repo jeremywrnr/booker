@@ -143,15 +143,15 @@ class Booker
       fpath.each do |fp|
         begin
           File.open(fp + "/_web", 'w') {|f| f.write(COMPLETION) }
+          system "zsh -c 'autoload -U _web'"
+          puts "Success: ".grn +
+            "installed zsh autocompletion in #{fp}"
           break # if this works, don't try anymore
         rescue
           puts "Failure: ".red +
             "could not write ZSH completion _web script to $fpath"
         end
       end
-      system "zsh -c 'autoload -U _web'"
-      puts "Success: ".grn +
-        "installed zsh autocompletion in #{fpath}"
 
     elsif /book/i.match(target) # bookmarks installation
       # locate bookmarks file, show user, write to config?
