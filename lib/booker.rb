@@ -169,18 +169,18 @@ class Booker
         puts "Success: ".grn +
           "config file updated with your bookmarks"
       rescue
-        puts "Failure: ".red +
-          "could not add bookmarks to config file ~/.booker"
+        pexit "Failure: ".red +
+          "could not add bookmarks to config file ~/.booker", 1
       end
 
-    elsif /config/i.match(target) # default config file generation
+    elsif /conf/i.match(target) # default config file generation
       begin
         BConfig.new.write
         puts "Success: ".grn +
-          "config file written to ~/.booker"
+          "example config file written to ~/.booker"
       rescue
-        puts "Failure: ".red +
-          "could not write config file ~/.booker"
+        pexit "Failure: ".red +
+          "could not write example config file to ~/.booker", 1
       end
 
     else # unknown argument passed into install
