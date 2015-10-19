@@ -31,7 +31,7 @@ module Browser
   end
 
   def domain
-    /.*(io|com|web|net|org|gov|edu)$/i
+    /.*(io|com|web|net|org|gov|edu)(\/.*)?$/i
   end
 
   # helper methods
