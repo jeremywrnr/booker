@@ -1,10 +1,11 @@
 # parse web's command line args
 
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 
 
 require 'yaml'
+require 'find'
 require 'json'
 require_relative 'bookmarks'
 require_relative 'config'
@@ -131,23 +132,35 @@ class Booker
     exit 0 if target.nil?
 
     if /comp/i.match(target) # completion installation
+      # check if zsh is even installed for this user
       begin
-        # determine where to install function
-        fpath = `zsh -c 'echo $fpath'`.split(' ')[0]
-        File.open(fpath + "/_web", 'w') {|f| f.write(COMPLETION) }
-        loaded = `zsh -c 'autoload -U _web'`
-        puts "Success: ".grn +
-          "installed zsh autocompletion in #{fpath}"
+        fpath = `zsh -c 'echo $fpath'`.split(' ')
       rescue
         pexit "Failure: ".red +
-          "could not write ZSH completion _web script to $fpath", 1
+          "zsh is probably not installed, could not find $fpath", 1
       end
+      # determine where to install completion function
+      fpath.each do |fp|
+        begin
+          File.open(fp + "/_web", 'w') {|f| f.write(COMPLETION) }
+          break # if this works, don't try anymore
+        rescue
+          puts "Failure: ".red +
+            "could not write ZSH completion _web script to $fpath"
+        end
+      end
+      exec "zsh -c 'autoload -U _web'"
+      puts "Success: ".grn +
+        "installed zsh autocompletion in #{fpath}"
 
-    elsif /bookmark/i.match(target) # bookmarks installation
+    elsif /book/i.match(target) # bookmarks installation
       # locate bookmarks file, show user, write to config?
-      puts 'searching for chrome bookmarks...(takes time)'
+      puts 'searching for chrome bookmarks... (takes some time)'
       begin
-        bms = `find ~ -iname '*bookmarks' | grep -i chrom`.split("\n")
+        bms = []
+        Find.find(ENV["HOME"]) do |path|
+          bms << path if /chrom.*bookmarks/i.match path
+        end
         puts 'select your bookmarks file: '
         bms.each_with_index{|bm, i| puts i.to_s.grn + " - " + bm }
         selected = bms[gets.chomp.to_i]
