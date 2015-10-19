@@ -1,34 +1,41 @@
-:bookmark: booker, cli chrome bookmark parser
-=============================================
+:bookmark: booker :bookmark:
+============================
+
 
 [![Build Status](https://travis-ci.org/jeremywrnr/booker.svg?branch=master)](https://travis-ci.org/jeremywrnr/booker)
 [![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://mit-license.org)
 
-## :bookmark: setup
+a CLI chrome bookmark parser, with tab completion.
+
+
+## setup
 
     $ [sudo] gem install booker
-    $ web -i comp conf book
 
-#### locating bookmarks
+##### locating bookmarks
 
-    $ web --install bookmarks
+    $ web -i book
 
-#### tab completion (ZSH)
+##### tab completion (ZSH)
 
-    $ web --install completion
+    $ web -i comp
+
+##### generate default config
+
+    $ web -i conf
 
 
-## :bookmark: booker usage (web)
+## :bookmark: usage (web) :bookmark:
 
-#### bookmark completion
+##### bookmark completion
 
     $ web [your_search_term]<TAB>
 
-#### opening a website
+##### opening a website
 
     $ web github.com/jeremywrnr/booker
 
-#### using search engine
+##### using a search engine
 
     $ web how to use the internet
 
@@ -51,10 +58,10 @@ documentation out there on it.
 
 
 ## development / testing
-There are some tests in `/spec', if clone this repo you can run them with
-`rake`. There is also a Makefile to install the gem, so you can run `make` and
-that will build the gem locally. To develop the zsh completion script, run
-clone this repo, and run this command in `/completion`:
+There are tests in `/spec', if clone this repo you can run them with `rake`.
+There is also a Makefile to install the gem, so you can run `make` and that
+will build the gem locally. To develop the zsh completion script, run clone
+this repo, and run this command in `/completion`:
 
     $ make && unfunction _web && autoload -U _web
 
