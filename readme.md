@@ -1,29 +1,36 @@
-cli google chrome bookmark parser
-=================================
+:bookmark: booker, cli chrome bookmark parser
+=============================================
 
 [![Build Status](https://travis-ci.org/jeremywrnr/booker.svg?branch=master)](https://travis-ci.org/jeremywrnr/booker)
 [![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://mit-license.org)
 
-## installing
+## :bookmark: setup
 
     $ [sudo] gem install booker
-    $ web --install config completion bookmarks
-
+    $ web -i comp conf book
 
 #### locating bookmarks
 
     $ web --install bookmarks
 
-
-#### autocompletion
-To install tab completion for zsh, you can run this:
+#### tab completion (ZSH)
 
     $ web --install completion
 
-To develop the zsh completion script, you can run clone this repo, and run
-this command in `/completion`:
 
-    $ make && unfunction _web && autoload -U _web
+## :bookmark: booker usage (web)
+
+#### bookmark completion
+
+    $ web [your_search_term]<TAB>
+
+#### opening a website
+
+    $ web github.com/jeremywrnr/booker
+
+#### using search engine
+
+    $ web how to use the internet
 
 
 ## about
@@ -40,14 +47,20 @@ complex - if I search for 'System', it will only show processes whose name or
 group match against that, but it tab through these matches numeric process IDs,
 which is the argument that `kill` actually takes. I learned that zsh
 autocompletion has a large learning curve, despite the good amount of
-documentation out there on it. Probably 80% of the initial development time was
-spent trying to figure out how to cycle through different matches...
+documentation out there on it.
 
 
-## todo
+## development / testing
+There are some tests in `/spec', if clone this repo you can run them with
+`rake`. There is also a Makefile to install the gem, so you can run `make` and
+that will build the gem locally. To develop the zsh completion script, run
+clone this repo, and run this command in `/completion`:
+
+    $ make && unfunction _web && autoload -U _web
+
+
+## todos
 - refactor so title is min(terminal width, max(message lengths))
-- make use of internal find rather than parsing syscalls
-- try to write in all fpath locations if one fails
-- implement more testing with rspec
 - config: browser selection command
 - add completion for -i/--install
+- implement more rspec testing

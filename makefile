@@ -5,7 +5,7 @@ build:
 	gem install ./booker-$(v).gem
 
 clean:
-	rm booker-$(v).gem
+	rm -v *.gem
 
 push: clean build
 	gem push booker-$(v).gem
