@@ -58,7 +58,7 @@ documentation out there on it.
 
 
 ## development / testing
-There are tests in `/spec', if clone this repo you can run them with `rake`.
+There are tests in `/spec`, if clone this repo you can run them with `rake`.
 There is also a Makefile to install the gem, so you can run `make` and that
 will build the gem locally. To develop the zsh completion script, run clone
 this repo, and run this command in `/completion`:
