@@ -17,6 +17,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.3.0)
     rspec-support (3.3.0)
+    ruby-terminfo (0.1.1)
 
 PLATFORMS
   ruby
@@ -26,6 +27,7 @@ DEPENDENCIES
   rake
   rspec
   rspec-mocks
+  ruby-terminfo
 
 BUNDLED WITH
    1.10.6
