@@ -1,7 +1,7 @@
 # parse web's command line args
 
 
-VERSION = "0.2.2"
+VERSION = "0.3"
 
 
 require 'yaml'

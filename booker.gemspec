@@ -1,7 +1,7 @@
 Gem::Specification.new do |g|
   g.name        = 'booker'
-  g.version     = '0.2.2'
-  g.date        = '2015-10-19'
+  g.version     = '0.3'
+  g.date        = '2015-10-20'
   g.summary     = 'CLI parser/selector for google chrome bookmarks'
   g.description = <<-EOF
     Select your bookmarks from the command line, by their bookmark id number.
@@ -22,8 +22,8 @@ Gem::Specification.new do |g|
   g.add_development_dependency 'rspec',          '~> 3.3', '>= 3.3.2'
   g.post_install_message = <<-EOF
     Thank you for installing booker!
-    To set bookmarks location, run `web -i bookmarks`
-    To add zsh completion,     run `web -i completion`
-    To see more help,          run `web --help`
+    To find your bookmarks,  run `web -i bookmarks`
+    To add zsh completion,   run `web -i completion`
+    To see more help,        run `web --help`
   EOF
 end
