@@ -8,7 +8,7 @@ TERMWIDTH = (TermInfo.screen_size[1]/2).floor
 CODEWIDTH = 16
 
 
-# thx danhassin, add some colors
+# add some colors, windowing methods
 class String
   def window(width)
     if self.length >= width
@@ -18,6 +18,7 @@ class String
     end
   end
 
+  # thx danhassin
   def colorize(color, mod)
     "\033[#{mod};#{color};49m#{self}\033[0;0m"
   end
@@ -51,33 +52,35 @@ class Bookmarks
     parse
   end
 
-
-  # output for zsh
+  # output for zsh autocompetion, print out id, title and cleaned url
   def autocomplete
     @allurls.each do |url|
-      # delete anything not allowed in linktitle
-      name = url.folder + url.title.gsub(/[^a-z0-9\-\/_]/i, '')
-      name.gsub!(/\-+/, '-')
-      name.gsub!(/ /,'')
-      name = name.window(TERMWIDTH)
-
-      # remove strange things from any linkurls
-      link = url.url.gsub(/[,'"&?].*/, '')
-      link.gsub!(/.*:\/+/,'')
-      link.gsub!(/ /,'')
-      link = link[0..TERMWIDTH-CODEWIDTH]
-
-      # print out title and cleaned url, for autocompetion
+      name = clean_name(url)
+      link = clean_link(url)
       puts url.id + ":" + name + ":" + link
     end
+  end
+
+  # clean title for completion, delete anything not allowed in linktitle
+  def clean_name(url)
+    name = url.folder + ' |' + url.title.gsub(/[^a-z0-9\-\/_ ]/i, '')
+    name.gsub!(/\-+/, '-')
+    name.gsub!(/[ ]+/,' ')
+    name = name.window(TERMWIDTH)
+  end
+
+  # clean link for completion, remove strange things from any linkurls
+  def clean_link(url)
+    link = url.url.gsub(/[,'"&?].*/, '')
+    link.gsub!(/.*:\/+/,'')
+    link.gsub!(/ /,'')
+    link = link[0..TERMWIDTH-CODEWIDTH] # need space for term. color codes
   end
 
   # get link (from id number)
   def bookmark_url(id)
     @allurls.each do |url|
-      if id == url.id
-        return url.url
-      end
+      return url.url if id == url.id
     end
   end
 
@@ -117,8 +120,8 @@ end # close bookmarks class
 # for recursively parsing bookmarks
 class Folder
   include Enumerable
-  def initialize(title='/', json)
-    @title = title.gsub(/[: ,'"]/, '-').downcase
+  def initialize(title='|', json)
+    @title = title.gsub(/[:,'"]/, '-').downcase
     @json = json
   end
 
@@ -131,7 +134,7 @@ end
 # clean bookmark title, set attrs
 class Bookmark
   def initialize(f, t, u, id)
-    @title = t.gsub(/[: ,'"+\-]/, '_').downcase
+    @title = t.gsub(/[:'"+]/, ' ').downcase
     @folder = f
     @url = u
     @id = id
