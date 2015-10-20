@@ -1,5 +1,5 @@
-:bookmark: booker :bookmark:
-============================
+:bookmark: booker
+=================
 
 
 [![Build Status](https://travis-ci.org/jeremywrnr/booker.svg?branch=master)](https://travis-ci.org/jeremywrnr/booker)
@@ -16,16 +16,16 @@ a CLI chrome bookmark parser, with tab completion.
 
     $ web -i book
 
-##### tab completion (ZSH)
+##### tab completion (ZSH only)
 
     $ web -i comp
 
-##### generate default config
+##### generate default config (~/.booker.yml)
 
     $ web -i conf
 
 
-## :bookmark: usage (web) :bookmark:
+## :bookmark: `web` usage
 
 ##### bookmark completion
 
@@ -58,16 +58,15 @@ documentation out there on it.
 
 
 ## development / testing
-There are tests in `/spec`, if clone this repo you can run them with `rake`.
-There is also a Makefile to install the gem, so you can run `make` and that
-will build the gem locally. To develop the zsh completion script, run clone
+There are some tests in `/spec`. If you clone this repo you can run them with
+`rake`. There is also a Makefile to install the gem, so you can run `make` and
+that will build the gem locally. To develop the zsh completion script, clone
 this repo, and run this command in `/completion`:
 
     $ make && unfunction _web && autoload -U _web
 
 
 ## todos
-- refactor so title is min(terminal width, max(message lengths))
 - config: browser selection command
 - add completion for -i/--install
 - implement more rspec testing
