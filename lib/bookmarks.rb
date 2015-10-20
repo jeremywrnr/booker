@@ -1,10 +1,14 @@
 # grab/parse bookmarks from json file on computer
 
 
-TERMWIDTH = 80
+# get int number of columns in half of screen
+TERMWIDTH = (TermInfo.screen_size[1]/2).floor
+
+# compl. color codes space
+CODEWIDTH = 16
 
 
-# thx danhassin
+# thx danhassin, add some colors
 class String
   def window(width)
     if self.length >= width
@@ -61,7 +65,7 @@ class Bookmarks
       link = url.url.gsub(/[,'"&?].*/, '')
       link.gsub!(/.*:\/+/,'')
       link.gsub!(/ /,'')
-      link = link[0..TERMWIDTH]
+      link = link[0..TERMWIDTH-CODEWIDTH]
 
       # print out title and cleaned url, for autocompetion
       puts url.id + ":" + name + ":" + link

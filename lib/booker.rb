@@ -7,6 +7,7 @@ VERSION = "0.2.2"
 require 'yaml'
 require 'find'
 require 'json'
+require 'terminfo'
 require_relative 'bookmarks'
 require_relative 'config'
 require_relative 'consts'
