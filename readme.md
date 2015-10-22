@@ -72,3 +72,4 @@ this repo, and run this command in `/completion`:
 - config: browser selection command
 - add completion for -i/--install
 - implement more rspec testing
+- tell user when -i book fails
