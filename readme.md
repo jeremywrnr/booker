@@ -73,3 +73,4 @@ this repo, and run this command in `/completion`:
 - add completion for -i/--install
 - implement more rspec testing
 - tell user when -i book fails
+- parse all args, then if num open bookmark
