@@ -13,6 +13,10 @@ describe Booker do
     expect { run("") }.to raise_error SystemExit
   end
 
+  it "should accept string arguments" do
+    run("testing 123")
+  end
+
   it "should refute unrecognized flags" do
     expect { run("-goo?-gaah??''") }.to raise_error SystemExit
     expect { run("-world -goo?") }.to raise_error SystemExit

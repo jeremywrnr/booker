@@ -54,6 +54,7 @@ class Booker
       else # just search for these arguments
         puts 'searching ' + allargs + '...'
         search = BConfig.new.searcher
+        p search
         exec browse << search << allargs
 
       end
