@@ -40,7 +40,7 @@ class Booker
     allargs = wrap(args.join(' '))
     browsearg = args.shift
 
-    if /[0-9]/.match(browsearg[0]) # bookmark
+    if browsearg.match(/^[0-9]/) # bookmark
       bm = Bookmarks.new('')
       url = bm.bookmark_url(browsearg)
       puts 'opening ' + url + '...'
@@ -53,7 +53,7 @@ class Booker
     else # just search for these arguments
       puts 'searching ' + allargs + '...'
       search = BConfig.new.searcher
-      system browse, search, allargs
+      system browse, wrap(search + allargs)
 
     end
   end
