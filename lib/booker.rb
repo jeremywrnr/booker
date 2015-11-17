@@ -50,13 +50,12 @@ class Booker
       puts 'opening ' + browsearg + '...'
       system browse << wrap(prep(browsearg))
 
-    elsif !browsearg.nil? # just search for these arguments
+    else
       allargs = wrap(args.join(' '))
       puts 'searching ' + allargs + '...'
       search = BConfig.new.searcher
       system browse << wrap(search + allargs)
 
-    else # handle odd nil string error
     end
   end
 

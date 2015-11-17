@@ -1,3 +1,7 @@
 language: ruby
 rvm:
   - 2.1.0
+install:
+  - bundle install --jobs=3 --retry=3
+  - make # install ruby gem locally
+  - web --install config

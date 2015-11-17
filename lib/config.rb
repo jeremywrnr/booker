@@ -52,6 +52,7 @@ end
 
 # high level configuration
 class BConfig
+  VALID = [:searcher, :bookmarks, :browser]
   HOME = ENV['HOME'].nil?? '/usr/local/' : ENV['HOME']
   YAMLCONF = HOME + '/.booker.yml'
 
@@ -59,6 +60,7 @@ class BConfig
     # config defaults (for osx, default chrome profile)
     readyaml = read(YAMLCONF)
     default_config = {
+      :browser  => 'open ',
       :searcher  => "https://duckduckgo.com/?q=",
       :bookmarks => HOME +
       "/Library/Application Support/Google/Chrome/Profile 1/Bookmarks",
@@ -67,15 +69,18 @@ class BConfig
     # configure w/ yaml config file, if it exists
     @config = readyaml ? readyaml : default_config
 
-    valid = @config.keys
-    @config.each do |k,v|
-      @config[k.to_sym] = v if valid.include? k.to_sym
+    # prune bad config keys
+    @config.each do |k, v|
+      if !VALID.include? k.to_sym
+        puts "Failure:".red + " Bad key found in config file: #{k}"
+        exit 1
+      end
     end
   end
 
   def read(file)
     begin
-      @config = YAML::load(IO.read(file))
+      config = YAML::load(IO.read(file))
     rescue Errno::ENOENT
       puts "Warning: ".yel +
         "YAML configuration file couldn't be found. Using defaults."
@@ -87,7 +92,7 @@ class BConfig
         "YAML configuration file contains invalid syntax. Using defaults."
       return false
     end
-    @config
+    config
   end
 
   def write(k=nil, v=nil)
@@ -100,10 +105,10 @@ class BConfig
   end
 
   def bookmarks
-    @config['bookmarks']
+    @config[:bookmarks]
   end
 
   def searcher
-    @config['searcher']
+    @config[:searcher]
   end
 end
