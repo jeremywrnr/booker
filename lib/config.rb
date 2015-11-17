@@ -52,14 +52,15 @@ end
 
 # high level configuration
 class BConfig
-  YAMLCONF = ENV['HOME'] + '/.booker.yml'
+  HOME = ENV['HOME'].nil?? '/usr/local/' : ENV['HOME']
+  YAMLCONF = HOME + '/.booker.yml'
 
   def initialize
     # config defaults (for osx, default chrome profile)
     readyaml = read(YAMLCONF)
     default_config = {
       :searcher  => "https://duckduckgo.com/?q=",
-      :bookmarks => ENV['HOME'] +
+      :bookmarks => HOME +
       "/Library/Application Support/Google/Chrome/Profile 1/Bookmarks",
     }
 
