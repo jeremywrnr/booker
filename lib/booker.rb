@@ -42,6 +42,7 @@ class Booker
     if browsearg.match(/^[0-9]/) # bookmark
       bm = Bookmarks.new('')
       url = bm.bookmark_url(browsearg)
+      pexit "Failure:".red + " bookmark #{browsearg} not found", 1 if url.nil?
       puts 'opening ' + url + '...'
       system browse << wrap(url)
 
@@ -49,11 +50,13 @@ class Booker
       puts 'opening ' + browsearg + '...'
       system browse << wrap(prep(browsearg))
 
-    else # just search for these arguments
+    elsif !browsearg.nil? # just search for these arguments
       allargs = wrap(args.join(' '))
       puts 'searching ' + allargs + '...'
       search = BConfig.new.searcher
       system browse << wrap(search + allargs)
+
+    else # handle odd nil string error
     end
   end
 
