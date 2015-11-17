@@ -45,17 +45,17 @@ class Booker
         bm = Bookmarks.new('')
         url = bm.bookmark_url(browsearg)
         puts 'opening ' + url + '...'
-        exec browse << wrap(url)
+        system browse << wrap(url)
 
       elsif domain.match(browsearg) # website
         puts 'opening ' + browsearg + '...'
-        exec browse << wrap(prep(browsearg))
+        system browse << wrap(prep(browsearg))
 
       else # just search for these arguments
         puts 'searching ' + allargs + '...'
         search = BConfig.new.searcher
         p search
-        exec browse << search << allargs
+        system browse << search << allargs
 
       end
     end
@@ -76,10 +76,10 @@ class Booker
       if id
         url = bm.bookmark_url(id)
         puts 'opening ' + url + '...'
-        exec browse << wrap(url)
+        system browse << wrap(url)
         exit 0
       else
-        pexit '  Error: '.red +
+        pexit 'Error: '.red +
           'web --bookmark expects bookmark id', 1
       end
     end
@@ -99,7 +99,7 @@ class Booker
       if args.length > 0
         install(args)
       else
-        pexit '  Error: '.red +
+        pexit 'Error: '.red +
           "web --install expects arguments: [completion, bookmarks, config]", 1
       end
     end
@@ -118,7 +118,7 @@ class Booker
       else
         puts 'searching ' + allargs + '...'
         search = BConfig.new.searcher
-        exec browse << search << allargs
+        system browse << search << allargs
         exit 0
       end
     end
@@ -134,62 +134,74 @@ class Booker
     exit 0 if target.nil?
 
     if /comp/i.match(target) # completion installation
-      # check if zsh is even installed for this user
-      begin
-        fpath = `zsh -c 'echo $fpath'`.split(' ')
-      rescue
-        pexit "Failure: ".red +
-          "zsh is probably not installed, could not find $fpath", 1
-      end
-      # determine where to install completion function
-      fpath.each do |fp|
-        begin
-          File.open(fp + "/_web", 'w') {|f| f.write(COMPLETION) }
-          system "zsh -c 'autoload -U _web'"
-          puts "Success: ".grn +
-            "installed zsh autocompletion in #{fp}"
-          break # if this works, don't try anymore
-        rescue
-          puts "Failure: ".red +
-            "could not write ZSH completion _web script to $fpath"
-        end
-      end
+      install_completion
 
     elsif /book/i.match(target) # bookmarks installation
-      # locate bookmarks file, show user, write to config?
-      puts 'searching for chrome bookmarks... (takes some time)'
-      begin
-        bms = []
-        Find.find(ENV["HOME"]) do |path|
-          bms << path if /chrom.*bookmarks/i.match path
-        end
-        puts 'select your bookmarks file: '
-        bms.each_with_index{|bm, i| puts i.to_s.grn + " - " + bm }
-        selected = bms[gets.chomp.to_i]
-        puts 'Selected: '.yel + selected
-        BConfig.new.write('bookmarks', selected)
-        puts "Success: ".grn +
-          "config file updated with your bookmarks"
-      rescue
-        pexit "Failure: ".red +
-          "could not add bookmarks to config file ~/.booker", 1
-      end
+      install_bookmarks
 
     elsif /conf/i.match(target) # default config file generation
-      begin
-        BConfig.new.write
-        puts "Success: ".grn +
-          "example config file written to ~/.booker"
-      rescue
-        pexit "Failure: ".red +
-          "could not write example config file to ~/.booker", 1
-      end
+      install_config
 
     else # unknown argument passed into install
-      pexit "Failure: ".red +
-        "unknown installation option (#{target})", 1
+      pexit "Failure: ".red + "unknown installation option (#{target})", 1
     end
 
     install(args) # recurse til done
+  end
+
+  def install_completion
+    # check if zsh is even installed for this user
+    begin
+      fpath = `zsh -c 'echo $fpath'`.split(' ')
+    rescue
+      pexit "Failure: ".red +
+        "zsh is probably not installed, could not find $fpath", 1
+    end
+
+    # determine where to install completion function
+    fpath.each do |fp|
+      begin
+        File.open(fp + "/_web", 'w') {|f| f.write(COMPLETION) }
+        system "zsh -c 'autoload -U _web'"
+        puts "Success: ".grn +
+          "installed zsh autocompletion in #{fp}"
+        break # if this works, don't try anymore
+      rescue
+        puts "Failure: ".red +
+          "could not write ZSH completion _web script to $fpath (#{fp})"
+      end
+    end
+  end
+
+  def install_bookmarks
+    # locate bookmarks file, show user, write to config?
+    puts 'searching for chrome bookmarks... (takes some time)'
+    begin
+      bms = []
+      Find.find(ENV["HOME"]) do |path|
+        bms << path if /chrom.*bookmarks/i.match path
+      end
+      puts 'select your bookmarks file: '
+      bms.each_with_index{|bm, i| puts i.to_s.grn + " - " + bm }
+      selected = bms[gets.chomp.to_i]
+      puts 'Selected: '.yel + selected
+      BConfig.new.write('bookmarks', selected)
+      puts "Success: ".grn +
+        "config file updated with your bookmarks"
+    rescue
+      pexit "Failure: ".red +
+        "could not add bookmarks to config file ~/.booker", 1
+    end
+  end
+
+  def install_config
+    begin
+      BConfig.new.write
+      puts "Success: ".grn +
+        "example config file written to ~/.booker"
+    rescue
+      pexit "Failure: ".red +
+        "could not write example config file to ~/.booker", 1
+    end
   end
 end
