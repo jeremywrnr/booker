@@ -6,15 +6,13 @@ require "spec_helper"
 
 # dont actually open links while testing
 module Browser
-  def browse
-    'echo '
-  end
+  def browse() 'echo ' end
 end
 
 
 describe Booker do
   def run(str)
-    @booker = Booker.new(str.split)
+    Booker.new(str.split)
   end
 
   def runblock(str)
@@ -22,24 +20,26 @@ describe Booker do
   end
 
   it "should exit cleanly when no arguments are given" do
-    expect { run("") }.to raise_error SystemExit
+    expect { runblock('') }.to exit_with_code 0
   end
 
-  it "should search string arguments" do
-    expect { run("testing 123") }.to output('foo').to_stdout
-  end
+  #it "should refuse unrecognized flags" do
+  #expect { runblock("-goo?-gaah??") }.to exit_with_code 1
+  #expect { runblock("-world -goo?") }.to exit_with_code 1
+  #expect { runblock("--hello") }.to exit_with_code 1
+  #end
 
-  it "should refuse unrecognized flags" do
-    expect { runblock("-goo?-gaah??") }.to exit_with_code 1
-    expect { runblock("-world -goo?") }.to exit_with_code 1
-    #expect { runblock("--hello") }.to exit_with_code 1
-  end
+  #valid_opts = %w{--version -v --install -i --help -h
+  #--complete -c --bookmark -b --search -s}
+  #valid_opts.each do |opt|
+  #it "should accept valid option flags (#{opt})" do
+  #expect { runblock(opt) }.to exit_with_code 0
+  #end
+  #end
 
-  valid_opts = %w{--version -v --install -i --help -h
-    --complete -c --bookmark -b --search -s}
-  valid_opts.each do |opt|
-    it "should accept valid option flags (#{opt})" do
-      expect { run(opt) }.to raise_error SystemExit
+  it "should search for string arguments" do
+    ['testing 123', 'mic check mic-check'].each do |str|
+      expect { run(str) }.to output("searching '#{str}'...\n").to_stdout
     end
   end
 end

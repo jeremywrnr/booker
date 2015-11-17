@@ -20,13 +20,13 @@ class Booker
     parse args
   end
 
-  def helper
-    pexit HELP_BANNER, 1
-  end
-
   def pexit(msg, sig)
     puts msg
     exit sig
+  end
+
+  def helper
+    pexit HELP_BANNER, 0
   end
 
   def parse(args)
@@ -37,27 +37,24 @@ class Booker
     parse_opt args if /^-.*/.match(args[0])
 
     # interpret
-    while args do
-      allargs = "'" + args.join(' ') + "'"
-      browsearg = args.shift
+    allargs = wrap(args.join(' '))
+    browsearg = args.shift
 
-      if /[0-9]/.match(browsearg[0]) # bookmark
-        bm = Bookmarks.new('')
-        url = bm.bookmark_url(browsearg)
-        puts 'opening ' + url + '...'
-        system browse << wrap(url)
+    if /[0-9]/.match(browsearg[0]) # bookmark
+      bm = Bookmarks.new('')
+      url = bm.bookmark_url(browsearg)
+      puts 'opening ' + url + '...'
+      system browse, wrap(url)
 
-      elsif domain.match(browsearg) # website
-        puts 'opening ' + browsearg + '...'
-        system browse << wrap(prep(browsearg))
+    elsif domain.match(browsearg) # website
+      puts 'opening ' + browsearg + '...'
+      system browse, wrap(prep(browsearg))
 
-      else # just search for these arguments
-        puts 'searching ' + allargs + '...'
-        search = BConfig.new.searcher
-        p search
-        system browse << search << allargs
+    else # just search for these arguments
+      puts 'searching ' + allargs + '...'
+      search = BConfig.new.searcher
+      system browse, search, allargs
 
-      end
     end
   end
 
