@@ -14,12 +14,19 @@ if SILENT
       $stderr = File.open(File::NULL, "w")
       $stdout = File.open(File::NULL, "w")
     end
+
     config.after(:all) do
       $stderr = original_stderr
       $stdout = original_stdout
     end
+
+    # allow old and new RSPEC syntax
+    config.expect_with(:rspec) do |c|
+      c.syntax = [:should, :expect]
+    end
   end
 end
+
 
 
 # Check exit codes with rspec

@@ -16,28 +16,32 @@ describe Booker do
   end
 
   def runblock(str)
-    lambda { run(str) }
+    Proc.new { run(str) }
   end
 
   it "should exit cleanly when no arguments are given" do
-    expect { runblock('') }.to exit_with_code 0
+    runblock('').should exit_with_code 0
   end
 
-  #it "should refuse unrecognized flags" do
-  #expect { runblock("-goo?-gaah??") }.to exit_with_code 1
-  #expect { runblock("-world -goo?") }.to exit_with_code 1
-  #expect { runblock("--hello") }.to exit_with_code 1
-  #end
+  it "should refuse unrecognized flags" do
+    runblock("-goo?-gaah??").should exit_with_code 1
+    runblock("-world -goo?").should exit_with_code 1
+    runblock("--hello").should exit_with_code 1
+  end
 
-  #valid_opts = %w{--version -v --install -i --help -h
-  #--complete -c --bookmark -b --search -s}
-  #valid_opts.each do |opt|
-  #it "should accept valid option flags (#{opt})" do
-  #expect { runblock(opt) }.to exit_with_code 0
-  #end
-  #end
+  %w{--install -i --bookmark -b --search -s}.each do |opt|
+    it "needs at least 1 cli argument for option #{opt}" do
+      runblock(opt).should exit_with_code 1
+    end
+  end
 
-  it "should search for string arguments" do
+  %w{--version -v --help -h --complete -c}.each do |opt|
+    it "should accept valid option #{opt} without args" do
+      runblock(opt).should exit_with_code 0
+    end
+  end
+
+  it "should search when given string arguments" do
     ['testing 123', 'mic check mic-check'].each do |str|
       expect { run(str) }.to output("searching '#{str}'...\n").to_stdout
     end
