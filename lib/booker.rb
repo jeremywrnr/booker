@@ -37,23 +37,23 @@ class Booker
     parse_opt args if /^-.*/.match(args[0])
 
     # interpret
-    allargs = wrap(args.join(' '))
-    browsearg = args.shift
+    browsearg = args[0]
 
     if browsearg.match(/^[0-9]/) # bookmark
       bm = Bookmarks.new('')
       url = bm.bookmark_url(browsearg)
       puts 'opening ' + url + '...'
-      system browse, wrap(url)
+      system browse << wrap(url)
 
     elsif domain.match(browsearg) # website
       puts 'opening ' + browsearg + '...'
-      system browse, wrap(prep(browsearg))
+      system browse << wrap(prep(browsearg))
 
     else # just search for these arguments
+      allargs = wrap(args.join(' '))
       puts 'searching ' + allargs + '...'
       search = BConfig.new.searcher
-      system browse, wrap(search + allargs)
+      system browse << wrap(search + allargs)
 
     end
   end

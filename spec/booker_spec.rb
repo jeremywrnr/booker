@@ -16,7 +16,7 @@ describe Booker do
   end
 
   def runblock(str)
-    Proc.new { run(str) }
+    lambda { run(str) }
   end
 
   it "should exit cleanly when no arguments are given" do
@@ -42,7 +42,7 @@ describe Booker do
   end
 
   it "should search when given string arguments" do
-    ['testing 123', 'mic check mic-check'].each do |str|
+    ['testing 123', 'hi', 'mic check mic-check'].each do |str|
       expect { run(str) }.to output("searching '#{str}'...\n").to_stdout
     end
   end

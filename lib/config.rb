@@ -22,6 +22,7 @@ module Browser
   extend OS
   def browse
     if OS.windows?
+      # alternatively, start seems to work
       '/cygdrive/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe '
     elsif OS.mac?
       'open -a "Google Chrome" '
@@ -86,7 +87,7 @@ class BConfig
   end
 
   def write(k=nil, v=nil)
-    if k.nil? or v.nil?
+    if k.nil? || v.nil?
       File.open(YAMLCONF, 'w') {|f| f.write(@config.to_yaml) }
     else
       @config[k] = v
