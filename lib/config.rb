@@ -56,14 +56,15 @@ class BConfig
 
   def initialize
     # config defaults (for osx, default chrome profile)
-    @config = {
+    readyaml = read(YAMLCONF)
+    default_config = {
       :searcher  => "https://duckduckgo.com/?q=",
       :bookmarks => ENV['HOME'] +
       "/Library/Application Support/Google/Chrome/Profile 1/Bookmarks",
     }
 
-    # configure through users yaml config file
-    @config = read(YAMLCONF)
+    # configure w/ yaml config file, if it exists
+    @config = readyaml ? readyaml : default_config
 
     valid = @config.keys
     @config.each do |k,v|
@@ -79,9 +80,11 @@ class BConfig
         "YAML configuration file couldn't be found. Using defaults."
       puts "Suggest: ".grn +
         "web --install config"
+      return false
     rescue Psych::SyntaxError
       puts "Warning: ".red +
         "YAML configuration file contains invalid syntax. Using defaults."
+      return false
     end
     @config
   end

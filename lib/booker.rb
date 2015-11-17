@@ -1,7 +1,7 @@
 # parse web's command line args
 
 
-VERSION = "0.3"
+VERSION = "0.3.2"
 
 
 require 'yaml'
@@ -54,7 +54,6 @@ class Booker
       puts 'searching ' + allargs + '...'
       search = BConfig.new.searcher
       system browse << wrap(search + allargs)
-
     end
   end
 
@@ -124,7 +123,7 @@ class Booker
     if args[0] == "--version" or args[0] == "-v"
       pexit VERSION, 0
     end
-  end
+  end # parse opt
 
   def install(args)
     target = args.shift
@@ -132,13 +131,10 @@ class Booker
 
     if /comp/i.match(target) # completion installation
       install_completion
-
     elsif /book/i.match(target) # bookmarks installation
       install_bookmarks
-
     elsif /conf/i.match(target) # default config file generation
       install_config
-
     else # unknown argument passed into install
       pexit "Failure: ".red + "unknown installation option (#{target})", 1
     end
