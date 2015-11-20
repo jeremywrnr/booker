@@ -4,9 +4,9 @@
 require "spec_helper"
 
 
-# dont actually open links while testing
+# dont actually open links while testing, just ignore
 module Browser
-  def browse() 'echo ' end
+  def browse() 'grep -v ".*" ' end
 end
 
 
