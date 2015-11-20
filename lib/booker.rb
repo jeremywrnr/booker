@@ -1,7 +1,7 @@
 # parse web's command line args
 
 
-VERSION = "0.3.2"
+VERSION = "0.4"
 
 
 require 'yaml'
@@ -174,18 +174,24 @@ class Booker
     # locate bookmarks file, show user, write to config?
     puts 'searching for chrome bookmarks... (takes some time)'
     begin
-      bms = []
+      bms = [] # look for bookmarks
       Find.find(ENV["HOME"]) do |path|
         bms << path if /chrom.*bookmarks/i.match path
       end
-      puts 'select your bookmarks file: '
-      bms.each_with_index{|bm, i| puts i.to_s.grn + " - " + bm }
-      selected = bms[gets.chomp.to_i]
-      puts 'Selected: '.yel + selected
-      BConfig.new.write('bookmarks', selected)
-      puts "Success: ".grn +
-        "config file updated with your bookmarks"
-    rescue
+
+      if bms.empty? # no bookmarks found
+        puts "Failure: ".red + 'bookmarks file could not be found.'
+        raise
+      else # have user select a file
+        puts 'select your bookmarks file: '
+        bms.each_with_index{|bm, i| puts i.to_s.grn + " - " + bm }
+        selected = bms[gets.chomp.to_i]
+        puts 'Selected: '.yel + selected
+        BConfig.new.write('bookmarks', selected)
+        puts "Success: ".grn +
+          "config file updated with your bookmarks"
+      end
+    rescue # catch all errors
       pexit "Failure: ".red +
         "could not add bookmarks to config file ~/.booker", 1
     end
