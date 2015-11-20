@@ -36,7 +36,7 @@ class Booker
     # if arg starts with hyphen, parse option
     parse_opt args if /^-.*/.match(args[0])
 
-    # interpret
+    # interpret command
     browsearg = args[0]
 
     if browsearg.match(/^[0-9]/) # bookmark
@@ -44,18 +44,15 @@ class Booker
       url = bm.bookmark_url(browsearg)
       pexit "Failure:".red + " bookmark #{browsearg} not found", 1 if url.nil?
       puts 'opening ' + url + '...'
-      system browse << wrap(url)
-
+      system(browse, wrap(url))
     elsif domain.match(browsearg) # website
       puts 'opening ' + browsearg + '...'
-      system browse << wrap(prep(browsearg))
-
+      system(browse, wrap(prep(browsearg)))
     else
       allargs = wrap(args.join(' '))
       puts 'searching ' + allargs + '...'
       search = BConfig.new.searcher
-      system browse << wrap(search + allargs)
-
+      system(browse, wrap(search + allargs))
     end
   end
 
@@ -68,7 +65,7 @@ class Booker
     pexit errormsg, 1 if ! (valid_opts.include? nextarg)
 
     # doing forced bookmarking
-    if args[0] == "--bookmark" or args[0] == "-b"
+    if args[0] == "--bookmark" || args[0] == "-b"
       bm = Bookmarks.new('')
       id = args[1]
       if id
@@ -83,7 +80,7 @@ class Booker
     end
 
     # doing autocompletion
-    if args[0] == "--complete" or args[0] == "-c"
+    if args[0] == "--complete" || args[0] == "-c"
       args.shift # remove flag
       allargs = args.join(' ')
       bm = Bookmarks.new(allargs)
@@ -92,7 +89,7 @@ class Booker
     end
 
     # doing installation
-    if args[0] == "--install" or args[0] == "-i"
+    if args[0] == "--install" || args[0] == "-i"
       args.shift # remove flag
       if args.length > 0
         install(args)
@@ -103,12 +100,12 @@ class Booker
     end
 
     # needs some help
-    if args[0] == "--help" or args[0] == "-h"
+    if args[0] == "--help" || args[0] == "-h"
       helper
     end
 
     # doing forced searching
-    if args[0] == "--search" or args[0] == "-s"
+    if args[0] == "--search" || args[0] == "-s"
       args.shift # remove flag
       allargs = args.join(' ')
       if allargs == ""
@@ -122,7 +119,7 @@ class Booker
     end
 
     # print version information
-    if args[0] == "--version" or args[0] == "-v"
+    if args[0] == "--version" || args[0] == "-v"
       pexit VERSION, 0
     end
   end # parse opt
