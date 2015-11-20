@@ -8,6 +8,7 @@ require 'yaml'
 require 'find'
 require 'json'
 require 'terminfo'
+require 'shellwords'
 require_relative 'bookmarks'
 require_relative 'config'
 require_relative 'consts'
@@ -29,6 +30,10 @@ class Booker
     pexit HELP_BANNER, 0
   end
 
+  def openweb(url)
+    system(browse + wrap(url))
+  end
+
   def parse(args)
     # no args given, show help
     helper if args.none?
@@ -43,16 +48,16 @@ class Booker
       bm = Bookmarks.new('')
       url = bm.bookmark_url(browsearg)
       pexit "Failure:".red + " bookmark #{browsearg} not found", 1 if url.nil?
-      puts 'opening ' + url + '...'
-      system(browse, wrap(url))
+      puts 'opening bookmark ' + url + '...'
+      openweb(wrap(url))
     elsif domain.match(browsearg) # website
-      puts 'opening ' + browsearg + '...'
-      system(browse, wrap(prep(browsearg)))
+      puts 'opening website ' + browsearg + '...'
+      openweb(wrap(prep(browsearg)))
     else
       allargs = wrap(args.join(' '))
       puts 'searching ' + allargs + '...'
       search = BConfig.new.searcher
-      system(browse, wrap(search + allargs))
+      openweb(Shellwords.escape(search + allargs))
     end
   end
 
@@ -71,7 +76,7 @@ class Booker
       if id
         url = bm.bookmark_url(id)
         puts 'opening ' + url + '...'
-        system browse << wrap(url)
+        system(browse + wrap(url))
         exit 0
       else
         pexit 'Error: '.red +
@@ -113,7 +118,7 @@ class Booker
       else
         puts 'searching ' + allargs + '...'
         search = BConfig.new.searcher
-        system browse << search << allargs
+        openweb(Shellwords.escape(search + allargs))
         exit 0
       end
     end

@@ -45,7 +45,8 @@ module Browser
   end
 
   def wrap(url)
-    "'" + url + "'"
+    #"'" + url + "'"
+    url
   end
 end
 

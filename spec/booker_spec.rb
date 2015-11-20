@@ -6,7 +6,7 @@ require "spec_helper"
 
 # dont actually open links while testing, just ignore
 module Browser
-  def browse() 'grep -v ".*" ' end
+  def browse() 'echo >/dev/null 2>&1 ' end
 end
 
 
@@ -41,9 +41,10 @@ describe Booker do
     end
   end
 
+
   it "should search when given string arguments" do
     ['testing 123', 'hi', 'mic check mic-check'].each do |str|
-      expect { run(str) }.to output("searching '#{str}'...\n").to_stdout
+      expect { run(str) }.to output("searching #{str}...\n").to_stdout
     end
   end
 end
