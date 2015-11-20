@@ -22,7 +22,7 @@ module Browser
   extend OS
   def browse
     if OS.windows?
-      # alternatively, start seems to work
+      # alternatively, start seems to work - probably check if powershell v cygwin?
       '/cygdrive/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe '
     elsif OS.mac?
       'open -a "Google Chrome" '
@@ -40,7 +40,7 @@ module Browser
     if /^http/.match(url)
       url
     else
-      'http://' << url
+      'http://' + url
     end
   end
 
@@ -50,7 +50,7 @@ module Browser
 end
 
 
-# high level configuration
+# configuration
 class BConfig
   VALID = [:searcher, :bookmarks, :browser]
   HOME = ENV['HOME'].nil?? '/usr/local/' : ENV['HOME']
@@ -84,8 +84,7 @@ class BConfig
     rescue Errno::ENOENT
       puts "Warning: ".yel +
         "YAML configuration file couldn't be found. Using defaults."
-      puts "Suggest: ".grn +
-        "web --install config"
+      puts "Suggest: ".grn + "web --install config"
       return false
     rescue Psych::SyntaxError
       puts "Warning: ".red +
@@ -95,11 +94,12 @@ class BConfig
     config
   end
 
+  # used for creating and updating the default configuration
   def write(k=nil, v=nil)
-    if k.nil? || v.nil?
+    if k.nil? && v.nil?
       File.open(YAMLCONF, 'w') {|f| f.write(@config.to_yaml) }
     else
-      @config[k] = v
+      @config[k] = v # update users yaml config file
       File.open(YAMLCONF, 'w+') {|f| f.write(@config.to_yaml) }
     end
   end
