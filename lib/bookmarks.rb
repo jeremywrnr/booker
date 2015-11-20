@@ -31,8 +31,8 @@ class String
 end
 
 
+# try to read bookmarks
 class Bookmarks
-  # try to read bookmarks
   def initialize(search_term)
     @conf = BConfig.new
     begin
@@ -120,28 +120,24 @@ end # close bookmarks class
 # for recursively parsing bookmarks
 class Folder
   include Enumerable
+  attr_reader :json, :title
   def initialize(title='|', json)
     @title = title.gsub(/[:,'"]/, '-').downcase
     @json = json
   end
 
-  def json() @json end
-  def title() @title end
+  # needed for Enumerable
   def each() @json.each end
 end
 
 
 # clean bookmark title, set attrs
 class Bookmark
+  attr_reader :title, :folder, :url, :id
   def initialize(f, t, u, id)
     @title = t.gsub(/[:'"+]/, ' ').downcase
     @folder = f
     @url = u
     @id = id
   end
-
-  def folder() @folder end
-  def title() @title end
-  def url() @url end
-  def id() @id end
 end
