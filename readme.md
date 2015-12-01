@@ -74,3 +74,4 @@ this repo, and run this command in `/completion`:
 - implement more rspec testing
 - tell user when -i book fails
 - parse all args, then if num open bookmark
+- support opening multiple bookmarks: 1 1 1
