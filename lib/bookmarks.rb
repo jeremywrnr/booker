@@ -33,7 +33,7 @@ end
 
 # try to read bookmarks
 class Bookmarks
-  def initialize(search_term)
+  def initialize(search_term = '')
     @conf = BConfig.new
     begin
       local_bookmarks = JSON.parse(open(@conf.bookmarks).read)

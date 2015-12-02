@@ -30,6 +30,10 @@ class Booker
     pexit HELP_BANNER, 0
   end
 
+  def version
+    pexit VERSION, 0
+  end
+
   def openweb(url)
     system(browse + wrap(url))
   end
@@ -39,54 +43,61 @@ class Booker
     helper if args.none?
 
     # if arg starts with hyphen, parse option
-    parse_opt args if /^-.*/.match(args[0])
+    parse_opt args if /^-.*/.match(args.first)
 
     # interpret command
-    browsearg = args[0]
+    browsearg = args.first
 
     if browsearg.match(/^[0-9]/) # bookmark
-      bm = Bookmarks.new('')
-      url = bm.bookmark_url(browsearg)
-      pexit "Failure:".red + " bookmark #{browsearg} not found", 1 if url.nil?
-      puts 'opening bookmark ' + url + '...'
-      openweb(wrap(url))
+      open_bookmark args
     elsif domain.match(browsearg) # website
       puts 'opening website ' + browsearg + '...'
       openweb(wrap(prep(browsearg)))
     else
       allargs = wrap(args.join(' '))
-      puts 'searching ' + allargs + '...'
-      search = BConfig.new.searcher
-      openweb(Shellwords.escape(search + allargs))
+      open_search allargs
     end
   end
 
+  # an array of ints, as bookmark ids
+  def open_bookmark(bm)
+    id = bm.shift
+    url = Bookmarks.new.bookmark_url(id)
+    pexit "Failure:".red + " bookmark #{id} not found", 1 if url.nil?
+    puts 'opening bookmark ' + url + '...'
+    openweb(wrap(url))
+    unless bm.empty?
+      open_bookmark bm
+    end
+  end
+
+  def open_search(term)
+    puts 'searching ' + term + '...'
+    search = BConfig.new.searcher
+    openweb(Shellwords.escape(search + term))
+    exit 0
+  end
+
+  # parse and execute any command line options
   def parse_opt(args)
     valid_opts = %w{--version -v --install -i --help -h
     --complete -c --bookmark -b --search -s}
 
-    nextarg = args[0]
-    errormsg = "Error: ".red + "unrecognized option #{nextarg}"
+    nextarg = args.shift
+    errormsg = 'Error: '.red + "unrecognized option #{nextarg}"
     pexit errormsg, 1 if ! (valid_opts.include? nextarg)
 
     # doing forced bookmarking
-    if args[0] == "--bookmark" || args[0] == "-b"
-      bm = Bookmarks.new('')
-      id = args[1]
-      if id
-        url = bm.bookmark_url(id)
-        puts 'opening ' + url + '...'
-        system(browse + wrap(url))
-        exit 0
+    if nextarg == '--bookmark' || nextarg == '-b'
+      if args.first.nil?
+        pexit 'Error: '.red + 'web --bookmark expects bookmark id', 1
       else
-        pexit 'Error: '.red +
-          'web --bookmark expects bookmark id', 1
+        open_bookmark args
       end
     end
 
     # doing autocompletion
-    if args[0] == "--complete" || args[0] == "-c"
-      args.shift # remove flag
+    if nextarg == '--complete' || nextarg == '-c'
       allargs = args.join(' ')
       bm = Bookmarks.new(allargs)
       bm.autocomplete
@@ -94,40 +105,28 @@ class Booker
     end
 
     # doing installation
-    if args[0] == "--install" || args[0] == "-i"
-      args.shift # remove flag
-      if args.length > 0
+    if nextarg == '--install' || nextarg == '-i'
+      if !args.empty?
         install(args)
       else
-        pexit 'Error: '.red +
-          "web --install expects arguments: [completion, bookmarks, config]", 1
+        err = 'web --install expects arguments: [completion, bookmarks, config]'
+        pexit 'Error: '.red + err, 1
       end
-    end
-
-    # needs some help
-    if args[0] == "--help" || args[0] == "-h"
-      helper
     end
 
     # doing forced searching
-    if args[0] == "--search" || args[0] == "-s"
-      args.shift # remove flag
+    if nextarg == '--search' || nextarg == '-s'
+      pexit '--search requires an argument', 1 if args.empty?
       allargs = args.join(' ')
-      if allargs == ""
-        pexit "--search requires an argument", 1
-      else
-        puts 'searching ' + allargs + '...'
-        search = BConfig.new.searcher
-        openweb(Shellwords.escape(search + allargs))
-        exit 0
-      end
+      open_search allargs
     end
 
+    # needs some help
+    helper if nextarg == '--help' || nextarg == '-h'
+
     # print version information
-    if args[0] == "--version" || args[0] == "-v"
-      pexit VERSION, 0
-    end
-  end # parse opt
+    version if nextarg == '--version' || nextarg == '-v'
+  end # parse_opt
 
   def install(args)
     target = args.shift
