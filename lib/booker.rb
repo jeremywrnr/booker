@@ -21,23 +21,6 @@ class Booker
     parse args
   end
 
-  def pexit(msg, sig)
-    puts msg
-    exit sig
-  end
-
-  def helper
-    pexit HELP_BANNER, 0
-  end
-
-  def version
-    pexit VERSION, 0
-  end
-
-  def openweb(url)
-    system(browse + wrap(url))
-  end
-
   def parse(args)
     # no args given, show help
     helper if args.none?
@@ -59,6 +42,23 @@ class Booker
     end
   end
 
+  def pexit(msg, sig)
+    puts msg
+    exit sig
+  end
+
+  def helper
+    pexit HELP_BANNER, 0
+  end
+
+  def version
+    pexit VERSION, 0
+  end
+
+  def openweb(url)
+    system(browse + wrap(url))
+  end
+
   # an array of ints, as bookmark ids
   def open_bookmark(bm)
     id = bm.shift
@@ -66,9 +66,7 @@ class Booker
     pexit "Failure:".red + " bookmark #{id} not found", 1 if url.nil?
     puts 'opening bookmark ' + url + '...'
     openweb(wrap(url))
-    unless bm.empty?
-      open_bookmark bm
-    end
+    open_bookmark bm unless bm.empty?
   end
 
   def open_search(term)
@@ -119,11 +117,13 @@ class Booker
       open_search allargs
     end
 
+    # print version information
+    version if nextarg == '--version' || nextarg == '-v'
+
     # needs some help
     helper if nextarg == '--help' || nextarg == '-h'
 
-    # print version information
-    version if nextarg == '--version' || nextarg == '-v'
+    exit 0 # dont parse_arg
   end # parse_opt
 
   def install(args)
