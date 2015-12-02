@@ -75,7 +75,6 @@ class Booker
     puts 'searching ' + term + '...'
     search = BConfig.new.searcher
     openweb(Shellwords.escape(search + term))
-    exit 0
   end
 
   # parse and execute any command line options
@@ -101,7 +100,6 @@ class Booker
       allargs = args.join(' ')
       bm = Bookmarks.new(allargs)
       bm.autocomplete
-      exit 0
     end
 
     # doing installation
