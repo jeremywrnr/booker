@@ -1,3 +1,5 @@
+## 0.4.1 - smallbug fixes, including better option parsing
+
 ## 0.4 - fix system browser call with shellwords.escape
 Also tell user when bookmarks cannot be found instead of hanging.
 
