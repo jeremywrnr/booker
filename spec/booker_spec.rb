@@ -6,7 +6,7 @@ require "spec_helper"
 
 # dont actually open links while testing, just ignore
 module Browser
-  def browse() 'echo >/dev/null 2>&1 ' end
+  def browse() "echo >/dev/null 2>&1 " end
 end
 
 
@@ -20,7 +20,7 @@ describe Booker do
   end
 
   it "should exit cleanly when no arguments are given" do
-    runblock('').should exit_with_code 0
+    runblock("").should exit_with_code 0
   end
 
   it "should refuse unrecognized flags" do
@@ -43,7 +43,7 @@ describe Booker do
 
 
   it "should search when given string arguments" do
-    ['testing 123', 'hi', 'mic check mic-check'].each do |str|
+    ["testing 123", "hi", "mic check mic-check"].each do |str|
       expect { run(str) }.to output("searching #{str}...\n").to_stdout
     end
   end
@@ -52,8 +52,8 @@ end
 
 describe Bookmarks do
   before do
-    @rawjson = JSON.parse(open('./spec/bookmarks.json').read)
-    @bookmarks = @rawjson['roots']['bookmark_bar']['children']
+    @rawjson = JSON.parse(open("./spec/bookmarks.json").read)
+    @bookmarks = @rawjson["roots"]["bookmark_bar"]["children"]
   end
 
   it "parses json files correctly" do
@@ -64,3 +64,4 @@ describe Bookmarks do
     expect(@bookmarks).to_not be_nil
   end
 end
+
