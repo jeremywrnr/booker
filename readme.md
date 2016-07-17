@@ -60,12 +60,18 @@ documentation out there on it.
 
 
 ## config
+You can edit the `~/.booker.yml` config file, which will look something similar
+to this:
 
     ---
-    :browser: 'open '
     :searcher: https://google.com/?q=
     :bookmarks: "/Users/jeremywrnr/Library/Application Support/Google/Chrome/Profile 2/Bookmarks"
 
+booker will also try to determine which command should be used to open your
+browser based on your operating system, but you can also explicitly choose
+which command you want use, by adding the following:
+
+    :browser: '<your-command> '
 
 ## development / testing
 There are some tests in `/spec`. If you clone this repo you can run them with
