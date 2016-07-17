@@ -18,8 +18,8 @@ EOS
 
 
 DEF_CONFIG = <<-EOS
+searcher:  https://google.com/?q=
 bookmarks: null
-searcher:  https://duckduckgo.com/?q=
 EOS
 
 
@@ -93,9 +93,9 @@ install_loc=~/.oh-my-zsh/completions
 script=_web
 
 install:
-	mkdir -vp $(install_loc)
-	cp -v $(script) $(install_loc)/
+  mkdir -vp $(install_loc)
+  cp -v $(script) $(install_loc)/
 
 uninstall:
-	rm -v $(install_loc)/$(script)
+  rm -v $(install_loc)/$(script)
 EOS
