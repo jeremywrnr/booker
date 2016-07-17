@@ -1,6 +1,6 @@
 # load zsh web completions
 install_loc=~/.oh-my-zsh/completions
-script=_web
+script=_booker
 
 install:
 	mkdir -vp $(install_loc)
