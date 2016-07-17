@@ -32,7 +32,7 @@ module Browser
   end
 
   def domain
-    /.*(io|com|web|net|org|gov|edu)(\/.*)?$/i
+    /.*(io|com|web|net|org|gov|edu|xyz)(\/.*)?$/i
   end
 
   # helper methods
@@ -62,7 +62,7 @@ class BConfig
     readyaml = read(YAMLCONF)
     default_config = {
       :browser  => 'open ',
-      :searcher  => "https://duckduckgo.com/?q=",
+      :searcher  => "https://google.com/?q=",
       :bookmarks => HOME +
       "/Library/Application Support/Google/Chrome/Profile 1/Bookmarks",
     }
