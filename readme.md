@@ -2,12 +2,12 @@
 =================
 
 
+a CLI chrome bookmark parser, with tab completion.
+
+
 [![Gem Version](https://badge.fury.io/rb/booker.svg)](https://badge.fury.io/rb/booker)
 [![Build Status](https://travis-ci.org/jeremywrnr/booker.svg?branch=master)](https://travis-ci.org/jeremywrnr/booker)
 [![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://jeremywrnr.com/mit-license)
-
-
-a CLI chrome bookmark parser, with tab completion.
 
 
 ## setup
@@ -57,6 +57,14 @@ group match against that, but it tab through these matches numeric process IDs,
 which is the argument that `kill` actually takes. I learned that zsh
 autocompletion has a large learning curve, despite the good amount of
 documentation out there on it.
+
+
+## config
+
+    ---
+    :browser: 'open '
+    :searcher: https://google.com/?q=
+    :bookmarks: "/Users/jeremywrnr/Library/Application Support/Google/Chrome/Profile 2/Bookmarks"
 
 
 ## development / testing
