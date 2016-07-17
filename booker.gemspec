@@ -1,6 +1,6 @@
 Gem::Specification.new do |g|
   g.name        = 'booker'
-  g.version     = '0.4.1'
+  g.version     = '0.4.2'
   g.date        = '2015-12-01'
   g.summary     = 'CLI parser/selector for google chrome bookmarks'
   g.description = <<-EOF
