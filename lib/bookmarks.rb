@@ -42,7 +42,7 @@ class Bookmarks
       puts "Warning: ".yel +
         "Chrome JSON Bookmarks not found."
       puts "Suggest: ".grn +
-        "web --install bookmarks"
+        "booker --install bookmarks"
       @chrome_bookmarks = {}
     end
 

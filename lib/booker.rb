@@ -1,4 +1,4 @@
-# parse web's command line args
+# parse booker's command line args
 
 
 VERSION = "0.4.2"
@@ -87,7 +87,7 @@ class Booker
     # doing forced bookmarking
     if nextarg == '--bookmark' || nextarg == '-b'
       if args.first.nil?
-        pexit 'Error: '.red + 'web --bookmark expects bookmark id', 1
+        pexit 'Error: '.red + 'booker --bookmark expects bookmark id', 1
       else
         open_bookmark args
       end
@@ -105,7 +105,7 @@ class Booker
       if !args.empty?
         install(args)
       else
-        err = 'web --install expects arguments: [completion, bookmarks, config]'
+        err = 'booker --install expects arguments: [completion, bookmarks, config]'
         pexit 'Error: '.red + err, 1
       end
     end
@@ -155,14 +155,14 @@ class Booker
     # determine where to install completion function
     fpath.each do |fp|
       begin
-        File.open(fp + "/_web", 'w') {|f| f.write(COMPLETION) }
-        system "zsh -c 'autoload -U _web'"
+        File.open(fp + "/_booker", 'w') {|f| f.write(COMPLETION) }
+        system "zsh -c 'autoload -U _booker'"
         puts "Success: ".grn +
           "installed zsh autocompletion in #{fp}"
         break # if this works, don't try anymore
       rescue
         puts "Failure: ".red +
-          "could not write ZSH completion _web script to $fpath (#{fp})"
+          "could not write ZSH completion _booker script to $fpath (#{fp})"
       end
     end
   end

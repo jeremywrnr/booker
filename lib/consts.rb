@@ -3,7 +3,7 @@
 
 HELP_BANNER = <<-EOS
 Open browser:
-    $ web [option] [arguments]
+    $ booker [option] [arguments]
 
 Main options:
     --bookmark, -b: explicity open bookmark
@@ -25,11 +25,11 @@ EOS
 
 
 COMPLETION = <<-EOS
-#compdef web
+#compdef booker
 #autoload
 
 
-_web_bookmarks() {
+_booker_bookmarks() {
     #http://zsh.sourceforge.net/Guide/zshguide06.html#l147
     setopt glob bareglobqual nullglob rcexpandparam extendedglob automenu
     unsetopt allexport aliases errexit octalzeroes ksharrays cshnullglob
@@ -37,9 +37,9 @@ _web_bookmarks() {
     #get chrome bookmarks
     local -a bookmarks sites search
 
-    #grab all CLI args, remove 'web' from start
-    search=`echo $@ | sed -e '/^web /d'`
-    sites=`web --complete $search`
+    #grab all CLI args, remove 'booker' from start
+    search=`echo $@ | sed -e '/^booker /d'`
+    sites=`booker --complete $search`
     bookmarks=("${(f)${sites}}")
 
     #terminal colors
@@ -61,7 +61,7 @@ _web_bookmarks() {
 }
 
 
-_web() {
+_booker() {
     compstate[insert]=menu
     local curcontext state line
     typeset -A opt_args
@@ -74,24 +74,24 @@ _web() {
         '(--install)--install[perform installations (bookmarks, completion, config)]'\
         '(-s)-s[search google for...]'\
         '(--search)--search[search google for...]'\
-        '(-h)-h[show web help]'\
-        '(--help)--help[show web help]'\
+        '(-h)-h[show booker help]'\
+        '(--help)--help[show booker help]'\
         '(-v)-v[show version]'\
         '(--version)--version[show version]'\
         '*::bookmarks:->bookmarks' && return 0
 
-    _web_bookmarks $words
+    _booker_bookmarks $words
 }
 
 
-_web
+_booker
 EOS
 
 
 ZSH_SCRIPT = <<-EOS
-# load zsh web completions
+# load zsh booker completions
 install_loc=~/.oh-my-zsh/completions
-script=_web
+script=_booker
 
 install:
   mkdir -vp $(install_loc)
