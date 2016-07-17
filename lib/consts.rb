@@ -18,8 +18,9 @@ EOS
 
 
 DEF_CONFIG = <<-EOS
-searcher:  https://google.com/?q=
-bookmarks: null
+---
+:searcher:  https://google.com/?q=
+:bookmarks: null
 EOS
 
 
