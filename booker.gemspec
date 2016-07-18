@@ -1,7 +1,7 @@
 Gem::Specification.new do |g|
   g.name        = 'booker'
-  g.version     = '0.5'
-  g.date        = '2015-12-01'
+  g.version     = '0.5.1'
+  g.date        = '2016-07-18'
   g.summary     = 'CLI parser/selector for google chrome bookmarks'
   g.description = <<-EOF
     Select your bookmarks from the command line, by their bookmark id number.

@@ -1,7 +1,7 @@
 # parse booker's command line args
 
 
-VERSION = "0.5"
+VERSION = "0.5.1"
 
 
 require 'yaml'

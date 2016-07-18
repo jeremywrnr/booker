@@ -1,4 +1,4 @@
-v=0.5
+v=0.5.1
 
 build:
 	gem build booker.gemspec
