@@ -3,12 +3,11 @@
 
 
 a CLI chrome bookmark parser, with tab completion.
-
-![Screencast](http://i.imgur.com/yydqb3m.gif)
-
 [![Gem Version](https://badge.fury.io/rb/booker.svg)](https://badge.fury.io/rb/booker)
 [![Build Status](https://travis-ci.org/jeremywrnr/booker.svg?branch=master)](https://travis-ci.org/jeremywrnr/booker)
 [![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://jeremywrnr.com/mit-license)
+
+![Screencast](http://i.imgur.com/yydqb3m.gif)
 
 
 ## setup
