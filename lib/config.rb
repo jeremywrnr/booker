@@ -85,7 +85,7 @@ class BConfig
     rescue Errno::ENOENT
       puts "Warning: ".yel +
         "YAML configuration file couldn't be found. Using defaults."
-      puts "Suggest: ".grn + "web --install config"
+      puts "Suggest: ".grn + "booker --install config"
       return false
     rescue Psych::SyntaxError
       puts "Warning: ".red +
