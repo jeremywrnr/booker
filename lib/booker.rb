@@ -14,7 +14,7 @@ require_relative 'config'
 require_relative 'consts'
 
 
-# get web opening command
+# get booker opening command
 class Booker
   include Browser
   def initialize(args)

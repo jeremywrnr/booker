@@ -1,10 +1,10 @@
 autocompletion help
 ===================
 
-To load or reload the web completion script, run this command in `/completion`:
+To load or reload the booker completion script, run this command in `/completion`:
 
-    $ make && unfunction _web && autoload -U _web
+    $ make && unfunction _booker && autoload -U _booker
 
-You can also run the completion script directly with `web`:
+You can also run the completion script directly with `booker`:
 
-    $ web --complete hello
+    $ booker --complete hello

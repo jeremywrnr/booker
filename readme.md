@@ -17,30 +17,30 @@ a CLI chrome bookmark parser, with tab completion.
 
 ##### locating bookmarks
 
-    $ web -i book
+    $ booker -i book
 
 ##### tab completion (ZSH only)
 
-    $ web -i comp
+    $ booker -i comp
 
 ##### generate default config (~/.booker.yml)
 
-    $ web -i conf
+    $ booker -i conf
 
 
-## :bookmark: `web` usage
+## :bookmark: `booker` usage
 
 ##### bookmark completion
 
-    $ web [your_search_term]<TAB>
+    $ booker [your_search_term]<TAB>
 
 ##### opening a website
 
-    $ web github.com/jeremywrnr/booker
+    $ booker github.com/jeremywrnr/booker
 
 ##### using a search engine
 
-    $ web how to use the internet
+    $ booker how to use the internet
 
 
 ## about
@@ -80,7 +80,7 @@ There are some tests in `/spec`. If you clone this repo you can run them with
 that will build the gem locally. To develop the zsh completion script, clone
 this repo, and run this command in `/completion`:
 
-    $ make && unfunction _web && autoload -U _web
+    $ make && unfunction _booker && autoload -U _booker
 
 
 ## todos
@@ -90,3 +90,4 @@ this repo, and run this command in `/completion`:
 - tell user when -i book fails
 - parse all args, then if num open bookmark
 - support opening multiple bookmarks: 1 1 1
+

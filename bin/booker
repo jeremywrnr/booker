@@ -4,7 +4,7 @@
 require_relative "../lib/booker"
 
 
-# web by jeremy warner
+# booker by jeremy warner
 # open up a website or search in google chrome from cli
 # also show and/or open up google chrome bookmarks
 
