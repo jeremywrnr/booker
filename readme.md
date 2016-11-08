@@ -84,6 +84,7 @@ this repo, and run this command in `/completion`:
 
 
 ## todos
+- autocreate config file when writing bookmarks
 - config: browser selection command
 - add completion for -i/--install
 - implement more rspec testing
