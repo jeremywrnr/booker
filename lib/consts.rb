@@ -1,5 +1,6 @@
 # file for large constant strings
 
+# todo - wrap in module
 
 HELP_BANNER = <<-EOS
 Open browser:
