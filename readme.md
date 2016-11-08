@@ -84,6 +84,8 @@ this repo, and run this command in `/completion`:
 
 
 ## todos
+- modularize global constants
+- single source versioning mechanism
 - autocreate config file when writing bookmarks
 - config: browser selection command
 - add completion for -i/--install
