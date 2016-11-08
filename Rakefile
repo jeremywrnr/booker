@@ -1,7 +1,7 @@
 require 'rake'
 require 'rspec/core/rake_task'
 
-v="0.5.2"
+v="0.5.1"
 
 task :default => :spec
 
