@@ -1,8 +1,5 @@
 # rspec testing of booker
-
-
 require "spec_helper"
-
 
 # dont actually open links while testing, just ignore
 module Browser
@@ -29,8 +26,12 @@ describe Booker do
     runblock("--hello").should exit_with_code 1
   end
 
+  it "should handle unescaped chars in the url" do
+    expect { run('(hi)') }.to output("searching (hi)...\n").to_stdout
+  end
+
   %w{--install -i --bookmark -b --search -s}.each do |opt|
-    it "needs at least 1 cli argument for option #{opt}" do
+    it "should have at least 1 cli arg for #{opt}" do
       runblock(opt).should exit_with_code 1
     end
   end
@@ -40,7 +41,6 @@ describe Booker do
       runblock(opt).should exit_with_code 0
     end
   end
-
 
   it "should search when given string arguments" do
     ["testing 123", "hi", "mic check mic-check"].each do |str|
@@ -64,4 +64,3 @@ describe Bookmarks do
     expect(@bookmarks).to_not be_nil
   end
 end
-

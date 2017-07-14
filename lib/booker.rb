@@ -1,9 +1,4 @@
 # parse booker's command line args
-
-
-VERSION = "0.5.1"
-
-
 require 'yaml'
 require 'find'
 require 'json'
@@ -16,7 +11,9 @@ require_relative 'consts'
 
 # get booker opening command
 class Booker
+  VERSION = "0.5.1"
   include Browser
+
   def initialize(args)
     parse args
   end
@@ -35,10 +32,9 @@ class Booker
       open_bookmark args
     elsif domain.match(browsearg) # website
       puts 'opening website ' + browsearg + '...'
-      openweb(wrap(prep(browsearg)))
+      openweb(prep(browsearg))
     else
-      allargs = wrap(args.join(' '))
-      open_search allargs
+      open_search(args.join(' '))
     end
   end
 
@@ -72,7 +68,7 @@ class Booker
   def open_search(term)
     puts 'searching ' + term + '...'
     search = BConfig.new.searcher
-    openweb(Shellwords.escape(search + term))
+    openweb(search + Shellwords.escape(term))
   end
 
   # parse and execute any command line options
@@ -84,7 +80,7 @@ class Booker
     errormsg = 'Error: '.red + "unrecognized option #{nextarg}"
     pexit errormsg, 1 if ! (valid_opts.include? nextarg)
 
-    # doing forced bookmarking
+    # forced bookmarking
     if nextarg == '--bookmark' || nextarg == '-b'
       if args.first.nil?
         pexit 'Error: '.red + 'booker --bookmark expects bookmark id', 1
@@ -93,14 +89,14 @@ class Booker
       end
     end
 
-    # doing autocompletion
+    # autocompletion
     if nextarg == '--complete' || nextarg == '-c'
       allargs = args.join(' ')
       bm = Bookmarks.new(allargs)
       bm.autocomplete
     end
 
-    # doing installation
+    # installation
     if nextarg == '--install' || nextarg == '-i'
       if !args.empty?
         install(args)
@@ -110,7 +106,7 @@ class Booker
       end
     end
 
-    # doing forced searching
+    # forced searching
     if nextarg == '--search' || nextarg == '-s'
       pexit '--search requires an argument', 1 if args.empty?
       allargs = args.join(' ')
