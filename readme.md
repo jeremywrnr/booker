@@ -84,6 +84,7 @@ this repo, and run this command in `/completion`:
 
 
 ## todos
+- fix failure on link w/ parens
 - modularize global constants
 - single source versioning mechanism
 - autocreate config file when writing bookmarks
