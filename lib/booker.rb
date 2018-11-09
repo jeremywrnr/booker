@@ -11,7 +11,7 @@ require_relative 'consts'
 
 # get booker opening command
 class Booker
-  @version = "0.6.0"
+  @version = "0.6.1"
   class << self
     attr_reader :version
   end
