@@ -1,8 +1,7 @@
 require_relative "lib/booker.rb"
+
 Gem::Specification.new do |g|
   g.name        = 'booker'
-  g.version     = Booker.version
-  g.date        = '2016-07-18'
   g.summary     = 'CLI parser/selector for google chrome bookmarks'
   g.description = <<-EOF
     Select your bookmarks from the command line, by their bookmark id number.
@@ -11,6 +10,11 @@ Gem::Specification.new do |g|
     will check if the argument is a website and visit it, or go to google
     (or your preferred search engine) with the string argument.
   EOF
+
+  g.version     = Booker.version
+  g.platform    = Gem::Platform::RUBY
+  g.date        = Time.now.strftime("%Y-%m-%d")
+
   g.homepage    = 'http://github.com/jeremywrnr/booker'
   g.author      = 'Jeremy Warner'
   g.email       = 'jeremywrnr@gmail.com'

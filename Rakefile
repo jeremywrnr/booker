@@ -1,7 +1,6 @@
 require 'rake'
 require 'rspec/core/rake_task'
 require_relative "lib/booker.rb"
-v = Booker.version
 
 task :default => :spec
 
@@ -15,11 +14,11 @@ end
 
 task :build do
   system "gem build booker.gemspec"
-  system "gem install booker-#{v}.gem"
+  system "gem install booker-#{Booker.version}.gem"
 end
 
 task :push => [:clean, :build] do
-  system "gem push booker-#{v}.gem"
+  system "gem push booker-#{Booker.version}.gem"
 end
 
 task :find do

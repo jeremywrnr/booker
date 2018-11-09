@@ -11,7 +11,7 @@ require_relative 'consts'
 
 # get booker opening command
 class Booker
-  @@version = "0.6.0"
+  @version = "0.6.0"
   class << self
     attr_reader :version
   end
@@ -51,7 +51,7 @@ class Booker
   end
 
   def version
-    pexit @@version, 0
+    pexit @version, 0
   end
 
   def openweb(url)
