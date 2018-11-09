@@ -13,34 +13,29 @@ a CLI chrome bookmark parser, with tab completion.
 
 ## setup
 
-    $ [sudo] gem install booker
+    [sudo] gem install booker
+    booker --install
 
-##### locating bookmarks
+Alternatively, the installation can be done incrementally:
 
-    $ booker -i book
-
-##### tab completion (ZSH only)
-
-    $ booker -i comp
-
-##### generate default config (~/.booker.yml)
-
-    $ booker -i conf
+    booker -i comp # adding tab completion (ZSH only)
+    booker -i conf # generate default config (~/.booker.yml)
+    booker -i book # locating bookmarks file
 
 
 ## :bookmark: `booker` usage
 
 ##### bookmark completion
 
-    $ booker [your_search_term]<TAB>
+    booker [your_search_term]<TAB>
 
 ##### opening a website
 
-    $ booker github.com/jeremywrnr/booker
+    booker github.com/jeremywrnr/booker
 
 ##### using a search engine
 
-    $ booker how to use the internet
+    booker how to use the internet
 
 
 ## about
@@ -61,18 +56,12 @@ documentation out there on it.
 
 
 ## config
-You can edit the `~/.booker.yml` config file, which will look something similar
-to this:
-
-    ---
-    :searcher: https://google.com/?q=
-    :bookmarks: "/Users/jeremywrnr/Library/Application Support/Google/Chrome/Profile 2/Bookmarks"
-
+You can also edit the `~/.booker.yml` config file manually.
 booker will also try to determine which command should be used to open your
 browser based on your operating system, but you can also explicitly choose
 which command you want use, by adding the following:
 
-    :browser: '<your-command> '
+    :browser: 'your-browser-command '
 
 ## development / testing
 There are some tests in `/spec`. If you clone this repo you can run them with
@@ -80,11 +69,12 @@ There are some tests in `/spec`. If you clone this repo you can run them with
 that will build the gem locally. To develop the zsh completion script, clone
 this repo, and run this command in `/completion`:
 
-    $ make && unfunction _booker && autoload -U _booker
+    make && unfunction _booker && autoload -U _booker
 
 
 ## todos
-- parse all args, then if num open bookmark
+- parse all args, then if number open bookmark
+- tab completion for other shells (bash, fish)
 - support opening multiple bookmarks: 1 1 1
 - fix failure on link w/ parens
 - implement more rspec testing
