@@ -1,3 +1,5 @@
+## 0.6.1 one command installation process
+
 ## 0.6 faster bookmark search, better versioning
 
 ## 0.5 merge make into rake, mark for improvements

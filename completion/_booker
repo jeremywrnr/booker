@@ -3,7 +3,7 @@
 
 
 _booker_bookmarks() {
-    #http://zsh.sourceforge.net/Guide/zshguide06.html#l147
+    # http://zsh.sourceforge.net/Guide/zshguide06.html#l147
     setopt glob bareglobqual nullglob rcexpandparam extendedglob automenu
     unsetopt allexport aliases errexit octalzeroes ksharrays cshnullglob
 

@@ -15,20 +15,15 @@ Gem::Specification.new do |g|
   g.platform    = Gem::Platform::RUBY
   g.date        = Time.now.strftime("%Y-%m-%d")
 
-  g.homepage    = 'http://github.com/jeremywrnr/booker'
   g.author      = 'Jeremy Warner'
   g.email       = 'jeremywrnr@gmail.com'
   g.license     = 'MIT'
   g.executables = ['booker']
-  g.files       = ['lib/booker.rb', 'lib/bookmarks.rb',
-                   'lib/config.rb', 'lib/consts.rb']
+  g.files       = ['lib/booker.rb', 'lib/bookmarks.rb', 'lib/config.rb', 'lib/consts.rb']
+  g.homepage    = 'http://github.com/jeremywrnr/booker'
+
   g.add_runtime_dependency     'ruby-terminfo',  '~> 0.1', '>= 0.1.1'
   g.add_runtime_dependency     'json',           '~> 2.1', '>= 2.1.0'
   g.add_development_dependency 'rspec',          '~> 3.3', '>= 3.3.2'
-  g.post_install_message = <<-EOF
-    Thank you for installing booker!
-    To find your bookmarks,  run `booker -i bookmarks`
-    To add zsh completion,   run `booker -i completion`
-    To see more help,        run `booker --help`
-  EOF
+  g.post_install_message = "To add zsh completion run: booker --install bookmarks"
 end

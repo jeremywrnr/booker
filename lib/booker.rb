@@ -103,9 +103,8 @@ class Booker
     if nextarg == '--install' || nextarg == '-i'
       if !args.empty?
         install(args)
-      else
-        err = 'booker --install expects arguments: [completion, bookmarks, config]'
-        pexit 'Error: '.red + err, 1
+      else # do everything
+        install(%w{completion config bookmarks})
       end
     end
 
@@ -188,7 +187,7 @@ class Booker
         bms.each_with_index {|bm, i| puts i.to_s.grn + " - " + bm }
         selected = bms[gets.chomp.to_i]
         puts 'Selected: '.yel + selected
-        BConfig.new.write('bookmarks', selected)
+        BConfig.new.write(:bookmarks, selected)
         puts "Success: ".grn + "config file updated with your bookmarks"
       end
     rescue StandardError => e
