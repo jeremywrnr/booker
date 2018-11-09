@@ -84,14 +84,8 @@ this repo, and run this command in `/completion`:
 
 
 ## todos
-- fix failure on link w/ parens
-- modularize global constants
-- single source versioning mechanism
-- autocreate config file when writing bookmarks
-- config: browser selection command
-- add completion for -i/--install
-- implement more rspec testing
-- tell user when -i book fails
 - parse all args, then if num open bookmark
 - support opening multiple bookmarks: 1 1 1
+- fix failure on link w/ parens
+- implement more rspec testing
 
