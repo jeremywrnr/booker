@@ -1,7 +1,7 @@
 require 'rake'
 require 'rspec/core/rake_task'
-
-v="0.5.1"
+require_relative "lib/booker.rb"
+v = Booker.version
 
 task :default => :spec
 

@@ -11,9 +11,12 @@ require_relative 'consts'
 
 # get booker opening command
 class Booker
-  VERSION = "0.5.1"
-  include Browser
+  @@version = "0.6.0"
+  class << self
+    attr_reader :version
+  end
 
+  include Browser
   def initialize(args)
     parse args
   end
@@ -31,7 +34,7 @@ class Booker
     if browsearg.match(/^[0-9]/) # bookmark
       open_bookmark args
     elsif domain.match(browsearg) # website
-      puts 'opening website ' + browsearg + '...'
+      puts 'opening website: ' + browsearg
       openweb(prep(browsearg))
     else
       open_search(args.join(' '))
@@ -48,7 +51,7 @@ class Booker
   end
 
   def version
-    pexit VERSION, 0
+    pexit @@version, 0
   end
 
   def openweb(url)
@@ -144,8 +147,7 @@ class Booker
     begin
       fpath = `zsh -c 'echo $fpath'`.split(' ')
     rescue
-      pexit "Failure: ".red +
-        "zsh is probably not installed, could not find $fpath", 1
+      pexit "Failure: ".red + "zsh is probably not installed, could not find $fpath", 1
     end
 
     # determine where to install completion function
@@ -153,51 +155,54 @@ class Booker
       begin
         File.open(fp + "/_booker", 'w') {|f| f.write(COMPLETION) }
         system "zsh -c 'autoload -U _booker'"
-        puts "Success: ".grn +
-          "installed zsh autocompletion in #{fp}"
+        puts "Success: ".grn + "installed zsh autocompletion in #{fp}"
         break # if this works, don't try anymore
       rescue
-        puts "Failure: ".red +
-          "could not write ZSH completion _booker script to $fpath (#{fp})"
+        puts "Failure: ".red + "could not write ZSH completion _booker script to $fpath (#{fp})"
       end
     end
   end
 
   def install_bookmarks
     # locate bookmarks file, show user, write to config?
-    puts 'searching for chrome bookmarks... (takes some time)'
+    puts 'searching for chrome bookmarks...'
     begin
       bms = [] # look for bookmarks
-      Find.find(ENV["HOME"]) do |path|
-        bms << path if /chrom.*bookmarks/i.match path
+      [ '/Library/Application Support/Google/Chrome',
+        '/AppData/Local/Google/Chrome/User Data/Default',
+        '/.config/chromium/Default/',
+        '/.config/google-chrome/Default/',
+      ].each do |f|
+        home = File.join(ENV['HOME'], f)
+        next if !FileTest.directory?(home)
+        Find.find(home) do |file|
+          bms << file if /chrom.*bookmarks/i.match file
+        end
       end
 
       if bms.empty? # no bookmarks found
         puts "Failure: ".red + 'bookmarks file could not be found.'
         raise
       else # have user select a file
-        puts 'select your bookmarks file: '
-        bms.each_with_index{|bm, i| puts i.to_s.grn + " - " + bm }
+        puts 'select bookmarks file: '
+        bms.each_with_index {|bm, i| puts i.to_s.grn + " - " + bm }
         selected = bms[gets.chomp.to_i]
         puts 'Selected: '.yel + selected
         BConfig.new.write('bookmarks', selected)
-        puts "Success: ".grn +
-          "config file updated with your bookmarks"
+        puts "Success: ".grn + "config file updated with your bookmarks"
       end
-    rescue # catch all errors
-      pexit "Failure: ".red +
-        "could not add bookmarks to config file ~/.booker", 1
+    rescue StandardError => e
+      puts e.message
+      pexit "Failure: ".red + "could not add bookmarks to config file ~/.booker", 1
     end
   end
 
   def install_config
     begin
       BConfig.new.write
-      puts "Success: ".grn +
-        "example config file written to ~/.booker"
+      puts "Success: ".grn + "example config file written to ~/.booker"
     rescue
-      pexit "Failure: ".red +
-        "could not write example config file to ~/.booker", 1
+      pexit "Failure: ".red + "could not write example config file to ~/.booker", 1
     end
   end
 end

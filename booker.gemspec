@@ -1,6 +1,7 @@
+require_relative "lib/booker.rb"
 Gem::Specification.new do |g|
   g.name        = 'booker'
-  g.version     = '0.5.1'
+  g.version     = Booker.version
   g.date        = '2016-07-18'
   g.summary     = 'CLI parser/selector for google chrome bookmarks'
   g.description = <<-EOF

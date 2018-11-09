@@ -25,7 +25,7 @@ module Browser
       # alternatively, start seems to work - probably check if powershell v cygwin?
       '/cygdrive/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe '
     elsif OS.mac?
-      'open -a "Google Chrome" '
+      'open '
     elsif OS.linux?
       'xdg-open ' # completely guessing here
     end
