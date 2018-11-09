@@ -18,7 +18,7 @@ Gem::Specification.new do |g|
   g.files       = ['lib/booker.rb', 'lib/bookmarks.rb',
                    'lib/config.rb', 'lib/consts.rb']
   g.add_runtime_dependency     'ruby-terminfo',  '~> 0.1', '>= 0.1.1'
-  g.add_runtime_dependency     'json',           '~> 1.8', '>= 1.8.1'
+  g.add_runtime_dependency     'json',           '~> 2.1', '>= 2.1.0'
   g.add_development_dependency 'rspec',          '~> 3.3', '>= 3.3.2'
   g.post_install_message = <<-EOF
     Thank you for installing booker!
