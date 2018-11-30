@@ -78,4 +78,4 @@ this repo, and run this command in `/completion`:
 - support opening multiple bookmarks: 1 1 1
 - fix failure on link w/ parens
 - implement more rspec testing
-
+- support other browsers? (firefox, safari)
