@@ -1,5 +1,5 @@
 language: ruby
-rvm: 2.2.3
+rvm: 3.0.1
 install:
   - bundle install --jobs=3 --retry=3
   - rake build # install gem locally
