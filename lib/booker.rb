@@ -2,7 +2,6 @@
 require 'yaml'
 require 'find'
 require 'json'
-require 'terminfo'
 require 'shellwords'
 require_relative 'bookmarks'
 require_relative 'config'
@@ -11,7 +10,7 @@ require_relative 'consts'
 
 # get booker opening command
 class Booker
-  @version = "0.6.1"
+  @version = "1.0.0"
   class << self
     attr_reader :version
   end

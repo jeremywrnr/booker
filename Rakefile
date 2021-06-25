@@ -27,6 +27,6 @@ task :find do
 end
 
 RSpec::Core::RakeTask.new(:spec) do |rt|
-  rt.rspec_opts = '--format documentation'
+  rt.rspec_opts = '--color --format documentation'
   rt.verbose = true
 end

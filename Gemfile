@@ -1,6 +1,2 @@
 source 'https://rubygems.org'
-gem 'json'
-gem 'rake'
-gem 'ruby-terminfo'
-gem 'rspec-mocks'
-gem 'rspec', :require => 'spec'
+gemspec

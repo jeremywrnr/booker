@@ -1,7 +1,11 @@
 # grab/parse bookmarks from json file on computer
 
 # get int number of columns in half of screen
-TERMWIDTH = (TermInfo.screen_size[1]/2).floor
+def terminal_width
+  guess = `tput cols`.to_i
+  guess == 0 ? 80 : guess
+end
+TERMWIDTH = terminal_width
 
 # compl. color codes space
 CODEWIDTH = 16
@@ -17,7 +21,6 @@ class String
     end
   end
 
-  # thx danhassin/dingbat
   def colorize(color, mod)
     "\033[#{mod};#{color};49m#{self}\033[0;0m"
   end

@@ -27,7 +27,7 @@ module Browser
     elsif OS.mac?
       'open '
     elsif OS.linux?
-      'xdg-open ' # completely guessing here
+      'xdg-open '
     end
   end
 
