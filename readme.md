@@ -1,12 +1,10 @@
-:bookmark: booker
-=================
-
-
-a CLI chrome bookmark parser, with tab completion.
+# :bookmark: booker
 
 [![Gem Version](https://badge.fury.io/rb/booker.svg)](https://badge.fury.io/rb/booker)
 [![Build Status](https://travis-ci.com/jeremywrnr/booker.svg)](https://travis-ci.com/jeremywrnr/booker)
 [![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://jeremywrnr.com/mit-license)
+
+a CLI chrome bookmark parser, with tab completion.
 
 ![Screencast](http://i.imgur.com/yydqb3m.gif)
 
