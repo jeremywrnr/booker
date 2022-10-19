@@ -1,14 +1,15 @@
 PATH
   remote: .
   specs:
-    booker (1.0.0)
+    booker (1.1.0)
       json
 
 GEM
   remote: https://rubygems.org/
   specs:
     diff-lcs (1.4.4)
-    json (2.5.1)
+    json (2.6.2)
+    rake (13.0.6)
     rspec (3.10.0)
       rspec-core (~> 3.10.0)
       rspec-expectations (~> 3.10.0)
@@ -28,6 +29,7 @@ PLATFORMS
 
 DEPENDENCIES
   booker!
+  rake
   rspec
 
 BUNDLED WITH

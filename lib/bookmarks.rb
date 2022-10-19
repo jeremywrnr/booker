@@ -3,7 +3,7 @@
 # get int number of columns in half of screen
 def terminal_width
   guess = `tput cols`.to_i
-  guess == 0 ? 80 : guess
+  guess == 0 ? 100 : guess
 end
 TERMWIDTH = terminal_width
 

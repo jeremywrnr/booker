@@ -10,7 +10,9 @@ require_relative 'consts'
 
 # get booker opening command
 class Booker
-  @version = "1.0.0"
+  @version = "1.1.0"
+  @@version = @version
+
   class << self
     attr_reader :version
   end
@@ -36,7 +38,7 @@ class Booker
       puts 'opening website: ' + browsearg
       openweb(prep(browsearg))
     else
-      open_search(args.join(' '))
+      open_search(args.join(' ').strip)
     end
   end
 
@@ -50,7 +52,7 @@ class Booker
   end
 
   def version
-    pexit @version, 0
+    pexit @@version, 0
   end
 
   def openweb(url)
@@ -70,6 +72,7 @@ class Booker
   def open_search(term)
     puts 'searching ' + term + '...'
     search = BConfig.new.searcher
+    term = term.gsub(' ', '+')
     openweb(search + Shellwords.escape(term))
   end
 

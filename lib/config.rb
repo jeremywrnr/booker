@@ -61,7 +61,7 @@ class BConfig
     readyaml = read(YAMLCONF)
     default_config = {
       :browser  => 'open ',
-      :searcher  => "https://google.com/?q=",
+      :searcher  => "https://google.com/search?q=",
       :bookmarks => HOME +
       "/Library/Application Support/Google/Chrome/Profile 1/Bookmarks",
     }
