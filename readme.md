@@ -1,6 +1,5 @@
 # :bookmark: booker
 
-[![Gem Version](https://badge.fury.io/rb/booker.svg)](https://badge.fury.io/rb/booker)
 [![Build Status](https://app.travis-ci.com/jeremywrnr/booker.svg)](https://app.travis-ci.com/jeremywrnr/booker)
 [![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://jeremywrnr.com/mit-license)
 
