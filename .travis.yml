@@ -1,6 +1,0 @@
-language: ruby
-rvm: 3.0.1
-install:
-  - bundle install --jobs=3 --retry=3
-  - rake build # install gem locally
-  - booker --install config
