@@ -23,7 +23,6 @@ Gem::Specification.new do |g|
   g.homepage    = 'http://github.com/jeremywrnr/booker'
 
   g.add_runtime_dependency     'json'
-  g.add_development_dependency 'rake'
   g.add_development_dependency 'rspec'
   g.post_install_message = "To add zsh completion run: booker --install bookmarks"
 end
