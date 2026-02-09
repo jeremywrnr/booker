@@ -26,11 +26,7 @@ clean:
 push: clean build
     gem push {{gem_name}}-{{version}}.gem
 
-# Find Chrome bookmarks JSON files
-find:
-    @echo "searching for chrome bookmarks json..."
-    @find ~ -iname "*bookmarks" | grep -i chrom
-
 # List all available recipes
 help:
     @just --list
+

@@ -3,7 +3,7 @@
 [![Build Status](https://app.travis-ci.com/jeremywrnr/booker.svg)](https://app.travis-ci.com/jeremywrnr/booker)
 [![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://jeremywrnr.com/mit-license)
 
-a CLI chrome bookmark parser, with tab completion.
+a CLI bookmark manager for Chrome and Firefox, with tab completion.
 
 ![Screencast](http://i.imgur.com/yydqb3m.gif)
 
@@ -36,11 +36,12 @@ Alternatively, the installation can be done incrementally:
 
 
 ## about
-This is a tool that allows you to tab complete (in zsh only) google chrome (gc)
-bookmarks, and then open them in the browser of your choice. gc stores the
-users bookmarks in a large json file locally, so this can be read/parsed by the
-tool, and combined with an autocompletion mechanism (i used a zsh script, in
-completion) to easily open your bookmarks from the command line.
+This is a tool that allows you to tab complete (in zsh only) Chrome and Firefox
+bookmarks, and then open them in the browser of your choice. Chrome stores
+bookmarks in a JSON file, while Firefox uses a SQLite database. Booker can
+read and parse both formats, and can even search across multiple bookmark
+sources simultaneously. Combined with an autocompletion mechanism (using a zsh
+script), you can easily open your bookmarks from the command line.
 
 I was inspired by the `kill` autocompletion that ships with oh-my-zsh, where
 you are shown a list of the current processes, and you can tab through to
@@ -62,17 +63,13 @@ which command you want use, by adding the following:
 
 ## development / testing
 There are some tests in `/spec`. If you clone this repo you can run them with
-`rake`. There is also a Makefile to install the gem, so you can run `make` and
-that will build the gem locally. To develop the zsh completion script, clone
-this repo, and run this command in `/completion`:
+`just spec`. There is also a justfile to build and install the gem locally, so
+you can run `just build` to build the gem. To develop the zsh completion script,
+clone this repo, and run:
 
-    make && unfunction _booker && autoload -U _booker
+    booker --install completion && unfunction _booker && autoload -U _booker
 
 
 ## todos
-- parse all args, then if number open bookmark
 - tab completion for other shells (bash, fish)
-- support opening multiple bookmarks: 1 1 1
-- fix failure on link w/ parens
-- implement more rspec testing
-- support other browsers? (firefox, safari)
+- support other browsers? (safari, edge)

@@ -1,8 +1,7 @@
-require_relative '../lib/booker'
-require 'rubygems'
-require 'rspec'
-require 'json'
-
+require_relative "../lib/booker"
+require "rubygems"
+require "rspec"
+require "json"
 
 # Redirect stderr and stdout while testing
 SILENT = true
@@ -27,11 +26,11 @@ if SILENT
   end
 end
 
-
-
 # Check exit codes with rspec
 RSpec::Matchers.define :exit_with_code do |code|
-  def supports_block_expectations?() true end
+  def supports_block_expectations?
+    true
+  end
   actual = nil
   match do |block|
     begin
