@@ -5,7 +5,7 @@
 
 a CLI bookmark manager for Chrome and Firefox, with tab completion.
 
-![Screencast](http://i.imgur.com/yydqb3m.gif)
+![Screencast](assets/screencast.gif)
 
 
 ## setup
