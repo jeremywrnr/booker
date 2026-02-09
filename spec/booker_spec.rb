@@ -28,8 +28,8 @@ describe Booker do
   end
 
   it "should handle unescaped chars in the url" do
-    expect { run("(hi)") }.to output("searching (hi)...\n").to_stdout
-    expect { run("    testing spaces  ") }.to output("searching testing spaces...\n").to_stdout
+    expect { run("(hi)") }.to output(/searching.*\(hi\)/).to_stdout
+    expect { run("    testing spaces  ") }.to output(/searching.*testing\s+spaces/).to_stdout
   end
 
   %w[--bookmark -b --search -s].each do |opt|

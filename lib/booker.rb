@@ -10,7 +10,7 @@ require_relative "consts"
 
 # get booker opening command
 class Booker
-  @version = "1.2.0"
+  @version = "1.2.1"
   @@version = @version
 
   class << self
@@ -51,7 +51,7 @@ class Booker
     unless other_args.empty?
       if other_args.length == 1 && domain.match(other_args.first)
         # single website URL
-        puts "opening website: " + other_args.first
+        puts "opening website: ".grn + other_args.first
         openweb(prep(other_args.first))
       else
         # search for the rest
@@ -91,13 +91,13 @@ class Booker
     id = bm.shift
     url = Bookmarks.new.bookmark_url(id)
     pexit "Failure:".red + " bookmark #{id} not found", 1 if url.nil?
-    puts "opening bookmark " + url + "..."
+    puts "opening bookmark ".grn + url
     openweb(url)  # No wrap() needed - system() handles it
     open_bookmark bm unless bm.empty?
   end
 
   def open_search(term)
-    puts "searching " + term + "..."
+    puts "searching ".grn + term
     search = BConfig.new.searcher
     term = term.tr(" ", "+")
     openweb(search + term)  # No shell escape needed - it's a URL
