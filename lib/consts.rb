@@ -2,21 +2,6 @@
 
 # todo - wrap in module
 
-HELP_BANNER = <<~EOS
-  Open browser:
-      $ booker [option] [arguments]
-  
-  Main options:
-      --bookmark, -b: explicity open bookmark
-       --install, -i: install [bookmarks, completion, config]
-        --search, -s: explicity search arguments
-  
-  Others:
-      --complete, -c: show tab completions
-       --version, -v: print version
-          --help, -h: show help
-EOS
-
 DEF_CONFIG = <<~EOS
   ---
   :searcher:  https://google.com/search?q=
@@ -78,8 +63,8 @@ COMPLETION = <<~EOS
           '(--bookmark)--bookmark[do bookmark completion]'\
           '(-c)-c[show bookmark completions]'\
           '(--complete)--complete[show bookmark completions]'\
-          '(-i)-i[perform installations (bookmarks, completion, config)]'\
-          '(--install)--install[perform installations (bookmarks, completion, config)]'\
+          '(-i)-i[perform installations (all, bookmarks, completion, config, safari)]'\
+          '(--install)--install[perform installations (all, bookmarks, completion, config, safari)]'\
           '(-s)-s[search google for...]'\
           '(--search)--search[search google for...]'\
           '(-h)-h[show booker help]'\

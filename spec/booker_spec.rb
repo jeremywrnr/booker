@@ -301,6 +301,12 @@ describe BookmarkParser do
       expect(parser_class).to eq(FirefoxBookmarkParser)
     end
 
+    it "SafariBookmarkParser should be detected for plist files" do
+      bookmarks = Bookmarks.new
+      parser_class = bookmarks.send(:detect_parser, "/path/to/Bookmarks.plist")
+      expect(parser_class).to eq(SafariBookmarkParser)
+    end
+
     it "ChromeBookmarkParser should default for unknown files" do
       bookmarks = Bookmarks.new
       parser_class = bookmarks.send(:detect_parser, "/path/to/Bookmarks")
@@ -355,6 +361,74 @@ describe BookmarkParser do
       # Should find bookmarks in nested folders (indicated by /)
       nested = results.select { |bm| bm.folder.count("/") > 1 }
       expect(nested).not_to be_empty
+    end
+  end
+
+  describe SafariBookmarkParser do
+    let(:fixture) { "./spec/safari_bookmarks.plist" }
+
+    it "should parse Safari bookmarks file" do
+      parser = SafariBookmarkParser.new(fixture, "")
+      parser.parse
+      results = parser.results
+      expect(results).to be_a(Array)
+      expect(results).not_to be_empty
+    end
+
+    it "should filter bookmarks by search term" do
+      parser = SafariBookmarkParser.new(fixture, "olympics")
+      parser.parse
+      results = parser.results
+
+      expect(results).not_to be_empty
+      results.each do |bm|
+        matches = bm.title.match?(/olympics/i) ||
+          bm.url.match?(/olympics/i) ||
+          bm.folder.match?(/olympics/i)
+        expect(matches).to be true
+      end
+    end
+
+    it "should handle nonexistent file gracefully" do
+      parser = SafariBookmarkParser.new("/nonexistent/Bookmarks.plist", "")
+      expect { parser.parse }.not_to raise_error
+      expect(parser.results).to be_empty
+    end
+
+    it "should extract bookmark properties correctly" do
+      parser = SafariBookmarkParser.new(fixture, "")
+      parser.parse
+      first = parser.results.first
+
+      expect(first).to respond_to(:title)
+      expect(first).to respond_to(:url)
+      expect(first).to respond_to(:folder)
+      expect(first).to respond_to(:id)
+      expect(first.url).to match(/^https?:\/\//)
+    end
+
+    it "should parse nested folders" do
+      parser = SafariBookmarkParser.new(fixture, "")
+      parser.parse
+      results = parser.results
+
+      # fixture has BookmarksBar/Dev/GitHub — at least one nested entry
+      nested = results.select { |bm| bm.folder.count("/") > 1 }
+      expect(nested).not_to be_empty
+    end
+
+    it "should include the BookmarksBar folder prefix" do
+      parser = SafariBookmarkParser.new(fixture, "olympics")
+      parser.parse
+      bm = parser.results.first
+      expect(bm.folder).to include("bookmarksbar")
+    end
+
+    it "should use WebBookmarkUUID as the bookmark id" do
+      parser = SafariBookmarkParser.new(fixture, "olympics")
+      parser.parse
+      bm = parser.results.first
+      expect(bm.id).to eq("BBBB-0001")
     end
   end
 
@@ -521,7 +595,8 @@ describe "Multi-source bookmarks" do
   describe "with multiple sources" do
     before do
       # Mock multiple bookmark sources
-      @sources = ["./spec/bookmarks.json", "./spec/bookmarks.json"]
+      # Two distinct sources so dedup doesn't collapse the second one
+      @sources = ["./spec/bookmarks.json", "./spec/safari_bookmarks.plist"]
       allow_any_instance_of(BConfig).to receive(:bookmarks).and_return(@sources)
     end
 

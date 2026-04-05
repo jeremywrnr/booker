@@ -2,12 +2,13 @@ require_relative "lib/booker"
 
 Gem::Specification.new do |g|
   g.name = "booker"
-  g.summary = "CLI bookmark manager for Chrome and Firefox"
+  g.summary = "CLI bookmark manager for Chrome, Firefox, and Safari"
   g.description = <<-EOF
     Search, browse, and open bookmarks from the command line. Supports Chrome,
-    Chromium, and Firefox. Browse all bookmarks interactively, or search by
-    keyword. ZSH users get tab completion through bookmark matches. Can also
-    open websites directly or search with your preferred search engine.
+    Chromium, Firefox, and Safari. Browse all bookmarks interactively, or
+    search by keyword. ZSH users get tab completion through bookmark matches.
+    Can also open websites directly or search with your preferred search
+    engine.
   EOF
 
   g.version = Booker.version
@@ -22,6 +23,8 @@ Gem::Specification.new do |g|
 
   g.add_runtime_dependency "json", "~> 2.7"
   g.add_runtime_dependency "sqlite3", "~> 1.7"
+  g.add_runtime_dependency "rexml", "~> 3.2"
   g.add_development_dependency "rspec", "~> 3.13"
+  g.add_development_dependency "standard", "~> 1.0"
   g.post_install_message = "To add zsh completion run: booker --install"
 end

@@ -2,6 +2,7 @@
 require "yaml"
 require "find"
 require "json"
+require "optparse"
 require "shellwords"
 require "fileutils"
 require_relative "bookmarks"
@@ -10,7 +11,7 @@ require_relative "consts"
 
 # get booker opening command
 class Booker
-  @version = "1.2.1"
+  @version = "1.3.0"
   @@version = @version
 
   class << self
@@ -24,53 +25,64 @@ class Booker
   end
 
   def parse(args)
-    # no args given, show interactive bookmark selector
     show_bookmarks if args.none?
 
-    # if arg starts with hyphen, parse option
-    parse_opt args if /^-.*/.match?(args.first)
-
-    # separate bookmark IDs from other args
-    bookmark_ids = []
-    other_args = []
-
-    args.each do |arg|
-      if /^[0-9_]+$/.match?(arg)  # bookmark ID (digits or underscore)
-        bookmark_ids << arg
-      else
-        other_args << arg
-      end
+    if args.first&.start_with?("-")
+      dispatch_option(args)
+      exit 0
     end
 
-    # open all bookmarks first
-    unless bookmark_ids.empty?
-      open_bookmark bookmark_ids
-    end
+    bookmark_ids, other_args = args.partition { |a| /^[0-9_]+$/.match?(a) }
+    open_bookmark(bookmark_ids) unless bookmark_ids.empty?
 
-    # then handle remaining args
     unless other_args.empty?
       if other_args.length == 1 && domain.match(other_args.first)
-        # single website URL
         puts "opening website: ".grn + other_args.first
         openweb(prep(other_args.first))
       else
-        # search for the rest
         open_search(other_args.join(" ").strip)
       end
     end
   end
 
+  def option_parser
+    @option_parser ||= OptionParser.new do |opts|
+      opts.banner = "Usage: booker [options] [arguments]"
+      opts.separator ""
+      opts.separator "Main options:"
+      opts.on("-b", "--bookmark", "explicitly open bookmark") { @mode = :bookmark }
+      opts.on("-i", "--install", "install: all|bookmarks|completion|config|safari") { @mode = :install }
+      opts.on("-s", "--search", "explicitly search arguments") { @mode = :search }
+      opts.separator ""
+      opts.separator "Other options:"
+      opts.on("-c", "--complete", "show tab completions") { @mode = :complete }
+      opts.on("-v", "--version", "print version") { puts @@version; exit 0 }
+      opts.on_tail("-h", "--help", "show help") { puts opts; exit 0 }
+    end
+  end
+
+  def dispatch_option(args)
+    option_parser.parse!(args)
+
+    case @mode
+    when :bookmark
+      pexit "Error: ".red + "booker --bookmark expects bookmark id", 1 if args.empty?
+      open_bookmark(args)
+    when :install
+      args.empty? ? install(%w[completion config bookmarks]) : install(args)
+    when :search
+      pexit "Error: ".red + "--search requires an argument", 1 if args.empty?
+      open_search(args.join(" "))
+    when :complete
+      Bookmarks.new(args.join(" ")).autocomplete
+    end
+  rescue OptionParser::InvalidOption => e
+    pexit "Error: ".red + e.message, 1
+  end
+
   def pexit(msg, sig)
     puts msg
     exit sig
-  end
-
-  def helper
-    pexit HELP_BANNER, 0
-  end
-
-  def version
-    pexit @@version, 0
   end
 
   def openweb(url)
@@ -153,59 +165,16 @@ class Booker
     exit 0
   end
 
-  # parse and execute any command line options
-  def parse_opt(args)
-    valid_opts = %w[--version -v --install -i --help -h
-      --complete -c --bookmark -b --search -s]
-
-    nextarg = args.shift
-    errormsg = "Error: ".red + "unrecognized option #{nextarg}"
-    pexit errormsg, 1 if !(valid_opts.include? nextarg)
-
-    # forced bookmarking
-    if nextarg == "--bookmark" || nextarg == "-b"
-      if args.first.nil?
-        pexit "Error: ".red + "booker --bookmark expects bookmark id", 1
-      else
-        open_bookmark args
-      end
-    end
-
-    # autocompletion
-    if nextarg == "--complete" || nextarg == "-c"
-      allargs = args.join(" ")
-      bm = Bookmarks.new(allargs)
-      bm.autocomplete
-    end
-
-    # installation
-    if nextarg == "--install" || nextarg == "-i"
-      if !args.empty?
-        install(args)
-      else # do everything
-        install(%w[completion config bookmarks])
-      end
-    end
-
-    # forced searching
-    if nextarg == "--search" || nextarg == "-s"
-      pexit "--search requires an argument", 1 if args.empty?
-      allargs = args.join(" ")
-      open_search allargs
-    end
-
-    # print version information
-    version if nextarg == "--version" || nextarg == "-v"
-
-    # needs some help
-    helper if nextarg == "--help" || nextarg == "-h"
-
-    exit 0 # dont parse_arg
-  end # parse_opt
 
   def install(args)
     target = args.shift
     exit 0 if target.nil?
+
+    # 'all' expands to the full install list (including opt-in safari)
+    if /^all$/i.match?(target)
+      args = %w[completion config bookmarks safari] + args
+      target = args.shift
+    end
 
     if /comp/i.match?(target) # completion installation
       install_completion
@@ -213,6 +182,8 @@ class Booker
       install_bookmarks
     elsif /conf/i.match?(target) # default config file generation
       install_config
+    elsif /safari/i.match?(target) # opt-in Safari FDA setup (macOS only)
+      install_safari
     else # unknown argument passed into install
       pexit "Failure: ".red + "unknown installation option (#{target})", 1
     end
@@ -292,7 +263,7 @@ class Booker
 
   def install_bookmarks
     # locate bookmarks file, show user, write to config?
-    puts "searching for chrome and firefox bookmarks..."
+    puts "searching for browser bookmarks..."
     begin
       bms = [] # look for bookmarks with type info
 
@@ -333,14 +304,17 @@ class Booker
         end
       end
 
+      # Search for Safari bookmarks (macOS only)
+      safari_path = File.join(ENV["HOME"], "Library/Safari/Bookmarks.plist")
+      bms << {path: safari_path, type: :safari} if File.exist?(safari_path)
+
       if bms.empty? # no bookmarks found
         puts "Failure: ".red + "bookmarks file could not be found."
         raise
       elsif bms.length == 1
         # Auto-select if only one source found
         selected = bms.first[:path]
-        type_label = (bms.first[:type] == :chrome) ? "[Chrome]" : "[Firefox]"
-        puts "Found bookmark source: #{type_label} #{selected}".yel
+        puts "Found bookmark source: #{bookmark_type_label(bms.first[:type])} #{selected}".yel
         puts "Selected: ".yel + selected
         BConfig.new.write(:bookmarks, selected)
         puts "Success: ".grn + "config file updated with your bookmarks"
@@ -352,8 +326,7 @@ class Booker
         offset = 1
 
         bms.each_with_index do |bm, i|
-          type_label = (bm[:type] == :chrome) ? "[Chrome]".yel : "[Firefox]".blu
-          puts (i + offset).to_s.grn + " - " + type_label + " " + bm[:path]
+          puts (i + offset).to_s.grn + " - " + bookmark_type_label(bm[:type], color: true) + " " + bm[:path]
         end
 
         input = gets
@@ -378,6 +351,17 @@ class Booker
     rescue => e
       puts e.message
       pexit "Failure: ".red + "could not add bookmarks to config file ~/.booker", 1
+    end
+  end
+
+  def bookmark_type_label(type, color: false)
+    label = {chrome: "[Chrome]", firefox: "[Firefox]", safari: "[Safari]"}[type] || "[?]"
+    return label unless color
+    case type
+    when :chrome then label.yel
+    when :firefox then label.blu
+    when :safari then label.cyan
+    else label
     end
   end
 
@@ -419,5 +403,76 @@ class Booker
     puts "Success: ".grn + "example config file written to ~/.booker"
   rescue
     pexit "Failure: ".red + "could not write example config file to ~/.booker", 1
+  end
+
+  # Opt-in Safari setup: walks through granting Full Disk Access so booker
+  # can read ~/Library/Safari/Bookmarks.plist. Not included in the default
+  # --install flow because it requires a TCC permission grant.
+  def install_safari
+    plist = File.join(ENV["HOME"], "Library/Safari/Bookmarks.plist")
+    fda_url = "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
+
+    unless RUBY_PLATFORM.include?("darwin")
+      puts "Skip: ".yel + "Safari support is macOS-only."
+      return
+    end
+
+    unless File.exist?(plist)
+      puts "Skip: ".yel + "Safari bookmarks not found at #{plist}"
+      puts "Hint: ".grn + "launch Safari at least once, then re-run."
+      return
+    end
+
+    if safari_readable?(plist)
+      puts "PASS: ".grn + "Safari bookmarks are already readable."
+      return
+    end
+
+    puts "Safari stores bookmarks at:"
+    puts "  #{plist}".cyan
+    puts
+    puts "That file is protected by macOS TCC. Grant Full Disk Access to one of:"
+    puts
+    puts "  [A] ".cyan + "Your terminal app".yel + " (simplest; inherited by any tool)"
+    puts "  [B] ".cyan + "/usr/bin/plutil only".yel + " (narrower scope)"
+    puts
+    print "Pick [A] or [B] (default A): "
+    $stdout.flush
+    choice = $stdin.gets.to_s.strip.upcase
+    choice = "A" if choice.empty?
+    pexit "Error: ".red + "invalid choice.", 1 unless %w[A B].include?(choice)
+
+    puts
+    puts "Opening the Full Disk Access pane..."
+    system("open", fda_url)
+    puts
+
+    puts "In the pane that just opened:"
+    if choice == "A"
+      puts "  1. Click ".yel + "+".cyan + ", add your terminal app from /Applications"
+      puts "  2. Toggle it ".yel + "on".cyan
+      puts "  3. ".yel + "Fully quit".cyan + " the terminal (Cmd+Q), reopen it,"
+      puts "     and re-run ".yel + "booker --install safari".cyan + " to verify."
+    else
+      puts "  1. Click ".yel + "+".cyan
+      puts "  2. Press ".yel + "Cmd+Shift+G".cyan + " (opens 'Go to Folder')".yel
+      puts "  3. Type ".yel + "/usr/bin/plutil".cyan + " and press Return".yel
+      puts "  4. Click ".yel + "Open".cyan + ", then toggle it ".yel + "on".cyan
+      puts
+      print "Press Return once you've added plutil and toggled it on... "
+      $stdout.flush
+      $stdin.gets
+
+      if safari_readable?(plist)
+        puts "PASS: ".grn + "Safari bookmarks are now readable."
+      else
+        puts "FAIL: ".red + "still can't read the bookmarks file."
+        puts "Try fully quitting the terminal (Cmd+Q) and re-running."
+      end
+    end
+  end
+
+  def safari_readable?(plist)
+    system("plutil", "-lint", "-s", plist, out: File::NULL, err: File::NULL)
   end
 end

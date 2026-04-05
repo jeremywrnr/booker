@@ -4,9 +4,20 @@
 gem_name := "booker"
 version := `ruby -r./lib/booker.rb -e 'puts Booker.version'`
 
+# Default: list available recipes
+default: list
+
+# List all available recipes
+list:
+    @just --list
+
 # Run tests with RSpec
 spec:
     bundle exec rspec --color --format documentation
+
+# Format Ruby source with standardrb
+format:
+    bundle exec standardrb --fix
 
 # Development mode with file watching
 dev:
@@ -25,8 +36,3 @@ clean:
 # Clean, build, and push gem to RubyGems
 push: clean build
     gem push {{gem_name}}-{{version}}.gem
-
-# List all available recipes
-help:
-    @just --list
-

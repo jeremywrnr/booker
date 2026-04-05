@@ -77,7 +77,7 @@ class BConfig
   end
 
   def detect_default_bookmarks
-    # Return ALL available bookmark sources (both Chrome and Firefox)
+    # Return ALL available bookmark sources (Chrome, Firefox, Safari)
     all_sources = discover_all_bookmark_sources
 
     # If we found sources, return them all; otherwise return a default single path
@@ -139,6 +139,9 @@ class BConfig
         end
       end
     end
+
+    safari_path = HOME + "/Library/Safari/Bookmarks.plist"
+    sources << safari_path if File.exist?(safari_path)
 
     sources.uniq
   end
