@@ -56,8 +56,14 @@ class Booker
       opts.separator ""
       opts.separator "Other options:"
       opts.on("-c", "--complete", "show tab completions") { @mode = :complete }
-      opts.on("-v", "--version", "print version") { puts @@version; exit 0 }
-      opts.on_tail("-h", "--help", "show help") { puts opts; exit 0 }
+      opts.on("-v", "--version", "print version") {
+        puts @@version
+        exit 0
+      }
+      opts.on_tail("-h", "--help", "show help") {
+        puts opts
+        exit 0
+      }
     end
   end
 
@@ -164,7 +170,6 @@ class Booker
 
     exit 0
   end
-
 
   def install(args)
     target = args.shift
