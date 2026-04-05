@@ -216,31 +216,138 @@ class FirefoxBookmarkParser < BookmarkParser
   end
 end
 
+# Safari bookmark parser (binary plist format)
+class SafariBookmarkParser < BookmarkParser
+  def parse
+    xml = convert_plist_to_xml(@file_path)
+    return if xml.nil?
+
+    begin
+      require "rexml/document"
+      doc = REXML::Document.new(xml)
+      plist_el = doc.root
+      root_node = plist_el.elements.to_a.first
+      root = parse_node(root_node)
+    rescue => e
+      puts "Warning: ".yel + "Could not parse Safari bookmarks: #{e.message}"
+      return
+    end
+
+    walk(root, "|")
+  end
+
+  private
+
+  def convert_plist_to_xml(path)
+    contents = File.read(path)
+    # Already an XML plist (fixtures, non-macOS). Binary plists need plutil
+    # (macOS-only); the JSON converter rejects <data>/<date> fields, so xml1.
+    return contents if contents.start_with?("<?xml") || contents.include?("<plist")
+
+    output = IO.popen(["plutil", "-convert", "xml1", "-o", "-", path], err: File::NULL, &:read)
+    return output if $?.success?
+
+    puts "Warning: ".yel + "Could not read Safari bookmarks file."
+    puts "Suggest: ".grn + "grant terminal 'Full Disk Access' in System Settings"
+    nil
+  rescue Errno::ENOENT
+    puts "Warning: ".yel + "Safari bookmarks file not found."
+    nil
+  end
+
+  def parse_node(el)
+    case el.name
+    when "dict"
+      result = {}
+      children = el.elements.to_a
+      children.each_slice(2) do |key_el, val_el|
+        next if key_el.nil? || val_el.nil?
+        result[key_el.text.to_s] = parse_node(val_el)
+      end
+      result
+    when "array"
+      el.elements.map { |c| parse_node(c) }
+    when "string"
+      el.text.to_s
+    when "integer"
+      el.text.to_i
+    when "real"
+      el.text.to_f
+    when "true"
+      true
+    when "false"
+      false
+    when "data", "date"
+      el.text.to_s
+    end
+  end
+
+  def walk(node, folder_title)
+    children = node["Children"]
+    return unless children.is_a?(Array)
+
+    children.each do |child|
+      case child["WebBookmarkType"]
+      when "WebBookmarkTypeLeaf"
+        parse_leaf(folder_title, child)
+      when "WebBookmarkTypeList"
+        name = child["Title"].to_s
+        sub_title = folder_title + name.gsub(/[:,'"]/, "-").downcase + "/"
+        walk(child, sub_title)
+      end
+    end
+  end
+
+  def parse_leaf(folder, leaf)
+    uri = leaf["URIDictionary"] || {}
+    title = (uri["title"] || "").to_s
+    url = (leaf["URLString"] || "").to_s
+    id = (leaf["WebBookmarkUUID"] || "").to_s
+
+    values = [folder, title, url, id]
+    if matches_search?(values)
+      @allurls << Bookmark.new(folder, title, url, id)
+    end
+  end
+end
+
 # Main Bookmarks facade class
 class Bookmarks
+  PARSER_SOURCE = {
+    ChromeBookmarkParser => "chrome",
+    FirefoxBookmarkParser => "firefox",
+    SafariBookmarkParser => "safari"
+  }
+
   def initialize(search_term = "")
     @conf = BConfig.new
-    file_paths = @conf.bookmarks  # Now returns an array
+    file_paths = @conf.bookmarks
     @allurls = []
+    seen = {}
 
-    # Parse bookmarks from all sources
+    loaded_sources = file_paths.count { |p| p && File.exist?(p) }
+    @multi_source = loaded_sources > 1
+
     file_paths.each_with_index do |file_path, source_index|
       next unless file_path && File.exist?(file_path)
 
       parser_class = detect_parser(file_path)
+      source = PARSER_SOURCE[parser_class]
       parser = parser_class.new(file_path, search_term)
       parser.parse
 
-      # Merge results, prefixing IDs to ensure uniqueness across sources
       parser.results.each do |bookmark|
-        # Create unique ID: source_index + original_id
-        unique_bookmark = Bookmark.new(
+        key = [bookmark.title, bookmark.url]
+        next if seen[key]
+        seen[key] = true
+
+        @allurls << Bookmark.new(
           bookmark.folder,
           bookmark.title,
           bookmark.url,
-          "#{source_index}_#{bookmark.id}"
+          "#{source_index}_#{bookmark.id}",
+          source
         )
-        @allurls << unique_bookmark
       end
     end
   end
@@ -260,8 +367,9 @@ class Bookmarks
     folder = url.folder.gsub(/^\|/, "")
     folder = (folder == "/") ? "[root]" : folder.chomp("/")
 
-    # Format: folder | title
-    name = folder + " |" + url.title.gsub(/[^a-z0-9\-\/_ ]/i, "")
+    # Format: [source] folder | title (source only when multi-source)
+    prefix = (@multi_source && url.source) ? "[#{url.source}] " : ""
+    name = prefix + folder + " | " + url.title.gsub(/[^a-z0-9\-\/_ ]/i, "")
     name.squeeze!("-")
     name.squeeze!(" ")
     # Use half terminal width for name to leave room for URL
@@ -290,6 +398,8 @@ class Bookmarks
   def detect_parser(file_path)
     if file_path&.end_with?(".sqlite")
       FirefoxBookmarkParser
+    elsif file_path&.end_with?(".plist")
+      SafariBookmarkParser
     else
       ChromeBookmarkParser
     end
@@ -314,11 +424,12 @@ end
 
 # clean bookmark title, set attrs
 class Bookmark
-  attr_reader :title, :folder, :url, :id
-  def initialize(f, t, u, id)
+  attr_reader :title, :folder, :url, :id, :source
+  def initialize(f, t, u, id, source = nil)
     @title = t.gsub(/[:'"+]/, " ").downcase
     @folder = f
     @url = u
     @id = id
+    @source = source
   end
 end

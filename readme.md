@@ -3,7 +3,7 @@
 [![Build Status](https://app.travis-ci.com/jeremywrnr/booker.svg)](https://app.travis-ci.com/jeremywrnr/booker)
 [![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://jeremywrnr.com/mit-license)
 
-a CLI bookmark manager for Chrome and Firefox, with tab completion.
+a CLI bookmark manager for Chrome, Firefox, and Safari, with tab completion.
 
 ![Screencast](assets/screencast.gif)
 
@@ -36,11 +36,11 @@ Alternatively, the installation can be done incrementally:
 
 
 ## about
-This is a tool that allows you to tab complete (in zsh only) Chrome and Firefox
-bookmarks, and then open them in the browser of your choice. Chrome stores
-bookmarks in a JSON file, while Firefox uses a SQLite database. Booker can
-read and parse both formats, and can even search across multiple bookmark
-sources simultaneously. Combined with an autocompletion mechanism (using a zsh
+This is a tool that allows you to tab complete (in zsh only) Chrome, Firefox,
+and Safari bookmarks, and then open them in the browser of your choice. Chrome
+stores bookmarks in a JSON file, Firefox uses a SQLite database, and Safari
+uses a binary plist. Booker can read and parse all three formats, and can even
+search across multiple bookmark sources simultaneously. Combined with an autocompletion mechanism (using a zsh
 script), you can easily open your bookmarks from the command line.
 
 I was inspired by the `kill` autocompletion that ships with oh-my-zsh, where
@@ -72,4 +72,3 @@ clone this repo, and run:
 
 ## todos
 - tab completion for other shells (bash, fish)
-- support other browsers? (safari, edge)
