@@ -23,7 +23,7 @@ Gem::Specification.new do |g|
     "completions/_booker", "completions/booker.bash", "completions/booker.fish"]
   g.homepage = "http://github.com/jeremywrnr/booker"
 
-  g.required_ruby_version = ">= 3.1"
+  g.required_ruby_version = ">= 3.2"
   g.add_runtime_dependency "json", "~> 2.21"
   g.add_runtime_dependency "sqlite3", "~> 2.9", ">= 2.9.5"
   g.add_runtime_dependency "rexml", "~> 3.4"
