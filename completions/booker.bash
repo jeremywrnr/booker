@@ -18,7 +18,7 @@ _booker() {
     # flags complete against the option list, not against bookmarks
     if [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "-b --bookmark -i --install -s --search \
-            -c --complete -v --version -h --help" -- "$cur"))
+            -l --list -c --complete --complete-raw -v --version -h --help" -- "$cur"))
         return 0
     fi
 

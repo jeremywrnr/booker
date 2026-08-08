@@ -46,7 +46,7 @@ module Booker
     # to work here - not just the handful (io|com|net|org|...) we used to list,
     # which sent bookmarks on .dev or .ai off to the search engine instead.
     def domain
-      %r{\A(?:#{SCHEME}\S+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d+)?(?:[/?#]\S*)?)\z}i
+      %r{\A(?:#{SCHEME}\S+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d+)?(?:[/?#]\S*)?)\z}io
     end
 
     # helper methods
@@ -54,7 +54,7 @@ module Booker
     # alone sent everything else through the same branch, so a completed
     # chrome://bookmarks/ or file:///... came out as http://chrome://bookmarks/
     def prep(url)
-      /\A#{SCHEME}/i.match?(url) ? url : "http://" + url
+      /\A#{SCHEME}/io.match?(url) ? url : "http://" + url
     end
 
     def wrap(url)

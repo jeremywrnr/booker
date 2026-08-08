@@ -280,10 +280,12 @@ RSpec.describe "the interactive picker" do
     Booker::Picker.enabled = true
   end
 
-  def first_id = Booker::Bookmarks.new("").allurls.first.id
+  # the picker can only ever hand back an id from the rows it was given, and
+  # open_bookmark now resolves against that same filtered set
+  def first_id(term = "") = Booker::Bookmarks.new(term).allurls.first.id
 
-  def picks(*ids)
-    allow_any_instance_of(Booker::Picker).to receive(:select).and_return(ids)
+  def picks(id)
+    allow(Booker::Picker).to receive(:select).and_return(id)
   end
 
   it "opens what was picked instead of printing the table" do
@@ -295,7 +297,7 @@ RSpec.describe "the interactive picker" do
   end
 
   it "offers a matching search term as a choice rather than searching for it" do
-    picks(first_id)
+    picks(first_id("github"))
     output = capture_stdout { catch_exit { Booker::CLI.new(["github"]) } }
 
     expect(output).to include("opening bookmark")
@@ -303,7 +305,7 @@ RSpec.describe "the interactive picker" do
   end
 
   it "hands the picker every match, not just the first" do
-    expect_any_instance_of(Booker::Picker).to receive(:select) do |_, rows|
+    expect(Booker::Picker).to receive(:select) do |rows|
       expect(rows.length).to eq(Booker::Bookmarks.new("github").allurls.length)
       expect(rows).to all(include("\t"))
       []
@@ -314,17 +316,8 @@ RSpec.describe "the interactive picker" do
 
   # the picker opens one bookmark per run. ids listed on the command line are a
   # different matter - `booker 1_2 3_4` still opens both, and always has
-  it "opens exactly one bookmark per run" do
-    # Picker#select caps what the finder returns, so the cli only ever sees
-    # one id here - the cap itself is covered in picker_spec
-    picks(Booker::Bookmarks.new("github").allurls.first.id)
-    output = capture_stdout { catch_exit { Booker::CLI.new(["github"]) } }
-
-    expect(output.scan("opening bookmark").length).to eq(1)
-  end
-
   it "does nothing at all when the picker is cancelled" do
-    picks
+    picks(nil)
     output = capture_stdout do
       expect { Booker::CLI.new(["github"]) }.to exit_with_code(0)
     end
@@ -334,13 +327,13 @@ RSpec.describe "the interactive picker" do
   end
 
   it "still searches for a term that matches no bookmark" do
-    expect_any_instance_of(Booker::Picker).not_to receive(:select)
+    expect(Booker::Picker).not_to receive(:select)
     expect(capture_stdout { catch_exit { Booker::CLI.new(["zzzznotabookmark"]) } })
       .to include("searching")
   end
 
   it "still opens a bare url without offering a choice" do
-    expect_any_instance_of(Booker::Picker).not_to receive(:select)
+    expect(Booker::Picker).not_to receive(:select)
     expect(capture_stdout { Booker::CLI.new(["example.com"]) })
       .to include("opening website")
   end
@@ -349,6 +342,18 @@ RSpec.describe "the interactive picker" do
     Booker::Picker.enabled = false
     expect(capture_stdout { catch_exit { Booker::CLI.new(["github"]) } })
       .to include("searching")
+  end
+
+  it "narrows the table to a search term rather than dropping it" do
+    all = capture_stdout do
+      expect { Booker::CLI.allocate.dispatch_option(["-l"]) }.to exit_with_code(0)
+    end
+    some = capture_stdout do
+      expect { Booker::CLI.allocate.dispatch_option(["-l", "github"]) }.to exit_with_code(0)
+    end
+
+    expect(some).to match(/Found \d+ bookmarks/)
+    expect(some.lines.length).to be < all.lines.length
   end
 
   it "prints the table anyway for --list" do
@@ -362,7 +367,7 @@ RSpec.describe "the interactive picker" do
 
   it "explains how to install when there are no bookmarks to pick from" do
     allow_any_instance_of(Booker::Config).to receive(:bookmarks).and_return([])
-    expect_any_instance_of(Booker::Picker).not_to receive(:select)
+    expect(Booker::Picker).not_to receive(:select)
 
     output = capture_stdout { catch_exit { Booker::CLI.new([]) } }
     expect(output).to include("No bookmarks found")

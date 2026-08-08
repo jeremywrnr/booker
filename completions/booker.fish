@@ -38,7 +38,9 @@ complete -c booker -f -a '(__booker_bookmarks)'
 
 complete -c booker -s b -l bookmark -d 'explicitly open bookmark'
 complete -c booker -s s -l search -d 'explicitly search arguments'
+complete -c booker -s l -l list -d 'print the bookmark table, skipping the picker'
 complete -c booker -s c -l complete -d 'show tab completions'
+complete -c booker -l complete-raw -d 'tab completions, tab separated (for shell scripts)'
 complete -c booker -s v -l version -d 'print version'
 complete -c booker -s h -l help -d 'show help'
 # the shell names here mirror SHELLS in lib/booker/installer.rb, which is the source of

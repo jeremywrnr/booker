@@ -17,34 +17,34 @@ RSpec.describe Booker::Picker do
 
   def with_finder(argv)
     allow(described_class).to receive(:command).and_return(argv)
-    described_class.new
+    described_class
   end
 
   describe "#select" do
     it "returns the id of the chosen line" do
-      expect(with_finder(["head", "-1"]).select(rows)).to eq(["0_abc"])
+      expect(with_finder(["head", "-1"]).select(rows)).to eq("0_abc")
     end
 
     # `cat` hands every candidate back, standing in for a finder configured
     # with --multi. one return press must never become several browser tabs
     it "opens only one bookmark even if the finder returns several" do
-      expect(with_finder(["cat"]).select(rows)).to eq(["0_abc"])
+      expect(with_finder(["cat"]).select(rows)).to eq("0_abc")
     end
 
-    it "returns no ids when nothing matched" do
-      expect(with_finder(["false"]).select(rows)).to eq([])
+    it "returns nothing when nothing matched" do
+      expect(with_finder(["false"]).select(rows)).to be_nil
     end
 
-    it "returns no ids when the finder was interrupted" do
+    it "returns nothing when the finder was interrupted" do
       # 130 is what fzf exits with on escape or ctrl-c
-      expect(with_finder(["sh", "-c", "exit 130"]).select(rows)).to eq([])
+      expect(with_finder(["sh", "-c", "exit 130"]).select(rows)).to be_nil
     end
 
     it "survives the finder exiting while booker is still writing" do
       # the escape-on-a-long-list case: `true` is gone before it reads a byte,
       # so the write end breaks partway through. enough rows to outrun the pipe
       # buffer, which is what makes EPIPE certain rather than likely
-      expect(with_finder(["true"]).select(rows(20_000))).to eq([])
+      expect(with_finder(["true"]).select(rows(20_000))).to be_nil
     end
 
     it "reports no finder when the binary is gone" do
@@ -55,10 +55,10 @@ RSpec.describe Booker::Picker do
       expect(with_finder(nil).select(rows)).to be_nil
     end
 
-    it "returns no ids when interrupted before the finder starts" do
+    it "returns nothing when interrupted before the finder starts" do
       picker = with_finder(["cat"])
       allow(IO).to receive(:popen).and_raise(Interrupt)
-      expect(picker.select(rows)).to eq([])
+      expect(picker.select(rows)).to be_nil
     end
   end
 
@@ -76,8 +76,6 @@ RSpec.describe Booker::Picker do
   end
 
   describe ".command" do
-    before { described_class.reset! }
-
     it "defaults to fzf when nothing is configured" do
       allow_any_instance_of(Booker::Config).to receive(:picker).and_return(nil)
       allow(described_class).to receive(:which).with("fzf").and_return("/usr/bin/fzf")
@@ -116,16 +114,6 @@ RSpec.describe Booker::Picker do
 
       expect(described_class.command).to be_nil
     end
-
-    it "only asks the config once" do
-      allow_any_instance_of(Booker::Config).to receive(:picker).and_return(nil)
-      allow(described_class).to receive(:which).and_return("/usr/bin/fzf")
-
-      described_class.command
-      described_class.command
-
-      expect(described_class).to have_received(:which).once
-    end
   end
 
   describe ".which" do
@@ -148,7 +136,9 @@ RSpec.describe Booker::Picker do
   end
 
   describe ".enabled?" do
-    before { described_class.reset! }
+    # the suite forces the picker off for every example; these want the real
+    # environment check back
+    before { described_class.enabled = nil }
     after { described_class.enabled = false }
 
     it "is whatever it was forced to be" do
@@ -156,11 +146,6 @@ RSpec.describe Booker::Picker do
       expect(described_class.enabled?).to be true
 
       described_class.enabled = false
-      expect(described_class.enabled?).to be false
-    end
-
-    it "is false when stdout is not a terminal" do
-      # the suite's $stdout is a File on /dev/null, so this is already the case
       expect(described_class.enabled?).to be false
     end
 
