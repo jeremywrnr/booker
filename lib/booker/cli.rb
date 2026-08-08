@@ -1,6 +1,12 @@
+# frozen_string_literal: true
+
 # parse booker's command line args and act on them
 
 require "optparse"
+
+require_relative "output"
+
+using Booker::Colors
 
 module Booker
   class CLI
@@ -93,10 +99,13 @@ module Booker
       browser_cmd = browse.strip
 
       # Redirect stdout/stderr to suppress GTK warnings
-      success = system(browser_cmd, url, out: "/dev/null", err: "/dev/null")
+      success = system(browser_cmd, url, out: File::NULL, err: File::NULL)
 
       unless success
-        puts "Warning: ".yel + "Failed to open URL (exit code: #{$?.exitstatus})"
+        # nil when the browser command was not found at all, in which case
+        # there is no exit status to report
+        code = Process.last_status&.exitstatus
+        puts "Warning: ".yel + "Failed to open URL (exit code: #{code})"
       end
     end
 
@@ -135,9 +144,9 @@ module Booker
       id_width = 10
       remaining = term_width - id_width - 3  # 3 spaces between columns
 
-      folder_width = [remaining * 0.20, 15].max.to_i
-      title_width = [remaining * 0.30, 20].max.to_i
-      url_width = [remaining * 0.50, 30].max.to_i
+      folder_width = (remaining * 0.20).clamp(15..).to_i
+      title_width = (remaining * 0.30).clamp(20..).to_i
+      url_width = (remaining * 0.50).clamp(30..).to_i
 
       # Display bookmarks in a readable format
       allurls.each do |bookmark|

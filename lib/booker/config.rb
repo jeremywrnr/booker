@@ -1,22 +1,22 @@
+# frozen_string_literal: true
+
 # configuation - which platform we are on, how to open a link, and where the
 # bookmarks live
 
 require "yaml"
 
+require_relative "output"
+
+using Booker::Colors
+
 module Booker
   # detect operating system
   module OS
-    def self.windows?
-      (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
-    end
+    def self.windows? = RUBY_PLATFORM.match?(/cygwin|mswin|mingw|bccwin|wince|emx/)
 
-    def self.mac?
-      (/darwin/ =~ RUBY_PLATFORM) != nil
-    end
+    def self.mac? = RUBY_PLATFORM.match?(/darwin/)
 
-    def self.linux?
-      !(OS.windows? or OS.mac?)
-    end
+    def self.linux? = !(windows? || mac?)
   end
 
   # return browser (chrome) opening command
@@ -59,9 +59,9 @@ module Booker
 
   # configuration
   class Config
-    VALID = [:searcher, :bookmarks, :browser]
-    HOME = ENV["HOME"].nil? ? "/usr/local/" : ENV["HOME"]
-    YAMLCONF = HOME + "/.booker.yml"
+    VALID = [:searcher, :bookmarks, :browser].freeze
+    HOME = ENV.fetch("HOME", "/usr/local/").freeze
+    YAMLCONF = (HOME + "/.booker.yml").freeze
 
     def initialize
       # config defaults (for osx, default chrome profile)
@@ -79,7 +79,7 @@ module Booker
       # prune bad config keys
       @config.each do |k, v|
         if !VALID.include? k.to_sym
-          puts "Failure:".red + " Bad key found in config file: #{k}"
+          warn "Failure:".red + " Bad key found in config file: #{k}"
           exit 1
         end
       end
@@ -115,14 +115,16 @@ module Booker
       chrome_base_paths.each do |base|
         next unless Dir.exist?(base)
 
-        # Find all profile directories and their Bookmarks files
-        begin
-          Dir.glob(File.join(base, "**/Bookmarks")).each do |bookmark_file|
-            sources << bookmark_file if File.file?(bookmark_file)
-          end
-        rescue
-          # Skip if we can't read this directory
+        # Find all profile directories and their Bookmarks files. globbing
+        # relative to base keeps any glob metacharacter in the path itself -
+        # a profile directory named "Chrome [work]", say - from being read as
+        # part of the pattern
+        Dir.glob("**/Bookmarks", base: base).each do |relative|
+          bookmark_file = File.join(base, relative)
+          sources << bookmark_file if File.file?(bookmark_file)
         end
+      rescue
+        # Skip if we can't read this directory
       end
 
       # Discover all Firefox profiles
@@ -156,19 +158,21 @@ module Booker
     end
 
     def read(file)
-      begin
-        config = YAML.load(IO.read(file))
-      rescue Errno::ENOENT
-        warn "Warning: ".yel +
-          "YAML configuration file couldn't be found. Using defaults."
-        warn "Suggest: ".grn + "booker --install config"
-        return false
-      rescue Psych::SyntaxError
-        warn "Warning: ".red +
-          "YAML configuration file contains invalid syntax. Using defaults."
-        return false
-      end
-      config
+      # #write emits symbol keys, so they have to be permitted on the way back
+      YAML.safe_load_file(file, permitted_classes: [Symbol])
+    rescue Errno::ENOENT
+      warn "Warning: ".yel +
+        "YAML configuration file couldn't be found. Using defaults."
+      warn "Suggest: ".grn + "booker --install config"
+      false
+    rescue Psych::Exception
+      # every psych failure means the same thing here - an unusable config we
+      # fall back from rather than crash on. rescuing SyntaxError alone let
+      # anchors through as an AliasesNotEnabled backtrace, since psych 4
+      # stopped allowing aliases by default
+      warn "Warning: ".red +
+        "YAML configuration file could not be read. Using defaults."
+      false
     end
 
     # used for creating and updating the default configuration
@@ -193,8 +197,6 @@ module Booker
       end
     end
 
-    def searcher
-      @config[:searcher]
-    end
+    def searcher = @config[:searcher]
   end
 end

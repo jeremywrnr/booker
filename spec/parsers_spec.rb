@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 # specs for the per browser parsers, against the fixtures in spec/fixtures
 
-describe Booker::Parsers::Base do
+RSpec.describe Booker::Parsers::Base do
   describe "parser detection" do
     it "Booker::Parsers::Chrome should be detected for JSON files" do
       bookmarks = Booker::Bookmarks.new
@@ -24,6 +26,26 @@ describe Booker::Parsers::Base do
       bookmarks = Booker::Bookmarks.new
       parser_class = bookmarks.send(:detect_parser, "/path/to/Bookmarks")
       expect(parser_class).to eq(Booker::Parsers::Chrome)
+    end
+  end
+
+  # the search term arrives straight off ARGV, so it gets escaped rather than
+  # interpolated - otherwise every regex metacharacter is a crash or a hang
+  describe "search terms containing regex metacharacters" do
+    it "treats them as literal text instead of raising" do
+      ["c++", "(a+)+$", "what?", "a[b", "*"].each do |term|
+        expect { Booker::Parsers::Chrome.new(fixture_path("bookmarks.json"), term).parse }
+          .not_to raise_error
+      end
+    end
+
+    it "matches the metacharacters literally" do
+      parser = Booker::Parsers::Chrome.new(fixture_path("bookmarks.json"), ".")
+      parser.parse
+      # "." as a wildcard would match every bookmark; as a literal it only
+      # matches the ones whose text actually contains a dot
+      expect(parser.results.length).to be < Booker::Parsers::Chrome
+        .new(fixture_path("bookmarks.json"), "").tap(&:parse).results.length
     end
   end
 
@@ -162,7 +184,7 @@ describe Booker::Parsers::Base do
   end
 end
 
-describe Booker::Parsers::Firefox do
+RSpec.describe Booker::Parsers::Firefox do
   # builds the two tables the recursive query walks, so the sqlite path runs
   # anywhere rather than only on a machine with firefox installed
   around do |example|
@@ -217,7 +239,7 @@ describe Booker::Parsers::Firefox do
   end
 end
 
-describe "plist scalars" do
+RSpec.describe "plist scalars" do
   # the fixture only holds strings and dicts; a real Safari file also carries
   # integers, dates and booleans, and parse_node has a branch for each
   it "reads every scalar type a plist can hold" do
@@ -248,10 +270,13 @@ describe "plist scalars" do
       File.write(binary, "bplist00\x00\x01")
 
       parser = Booker::Parsers::Safari.new(binary, "")
-      output = capture_stdout { parser.parse }
+      err = nil
+      out = capture_stdout { err = capture_stderr { parser.parse } }
 
       # plutil fails on a mac and is missing on linux; either way it warns
-      expect(output).to match(/Could not read Safari bookmarks|bookmarks file not found/)
+      expect(err).to match(/Could not read Safari bookmarks|bookmarks file not found/)
+      # and the warning stays off stdout, which is where --complete-raw writes
+      expect(out).to eq("")
       expect(parser.results).to be_empty
     end
   end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # booker - search, browse and open browser bookmarks from the command line
 #
 # Load order matters in one place: Bookmarks::PARSER_SOURCE names the parser

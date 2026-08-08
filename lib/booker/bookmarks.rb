@@ -1,5 +1,14 @@
+# frozen_string_literal: true
+
 # grab/parse bookmarks from every configured source, and the two value objects
 # the parsers hand back
+#
+# Set needs no require: it has been autoloaded since ruby 3.2, which is the
+# floor in the gemspec, and is core from 3.5 on
+
+require_relative "output"
+
+using Booker::Colors
 
 module Booker
   # Main Bookmarks facade class
@@ -8,7 +17,7 @@ module Booker
       Parsers::Chrome => "chrome",
       Parsers::Firefox => "firefox",
       Parsers::Safari => "safari"
-    }
+    }.freeze
 
     attr_reader :allurls
 
@@ -16,7 +25,7 @@ module Booker
       @conf = Config.new
       file_paths = @conf.bookmarks
       @allurls = []
-      seen = {}
+      seen = Set.new
 
       loaded_sources = file_paths.count { |p| p && File.exist?(p) }
       @multi_source = loaded_sources > 1
@@ -30,16 +39,16 @@ module Booker
         parser.parse
 
         parser.results.each do |bookmark|
-          key = [bookmark.title, bookmark.url]
-          next if seen[key]
-          seen[key] = true
+          # add? is nil when the key was already there, so the dedupe check and
+          # the record of having seen it are the same call
+          next unless seen.add?([bookmark.title, bookmark.url])
 
           @allurls << Bookmark.new(
-            bookmark.folder,
-            bookmark.title,
-            bookmark.url,
-            "#{source_index}_#{bookmark.id}",
-            source
+            folder: bookmark.folder,
+            title: bookmark.title,
+            url: bookmark.url,
+            id: "#{source_index}_#{bookmark.id}",
+            source: source
           )
         end
       end
@@ -67,7 +76,7 @@ module Booker
     # clean title for completion, delete anything not allowed in linktitle
     def clean_name(url)
       # Use half terminal width for name to leave room for URL
-      display_name(url).window([Term.width / 2, 50].min)
+      display_name(url).window((Term.width / 2).clamp(..50))
     end
 
     # "[source] folder | title", with no width applied
@@ -95,7 +104,7 @@ module Booker
       link.gsub!(/.*:\/+/, "")
       link.delete!(" ")
       # Use half terminal width for URL
-      max_width = [Term.width / 2 - CODEWIDTH, 50].min
+      max_width = (Term.width / 2 - CODEWIDTH).clamp(..50)
       link[0..max_width]
     end
 
@@ -136,15 +145,12 @@ module Booker
     end
   end
 
-  # clean bookmark title, set attrs
-  class Bookmark
-    attr_reader :title, :folder, :url, :id, :source
-    def initialize(f, t, u, id, source = nil)
-      @title = t.gsub(/[:'"+]/, " ").downcase
-      @folder = f
-      @url = u
-      @id = id
-      @source = source
+  # one parsed bookmark. the three browsers disagree about what punctuation
+  # belongs in a title, so cleaning happens here rather than in each parser.
+  # Data.new still accepts positional args, so the parsers could pass either
+  Bookmark = Data.define(:folder, :title, :url, :id, :source) do
+    def initialize(folder:, title:, url:, id:, source: nil)
+      super(folder:, title: title.gsub(/[:'"+]/, " ").downcase, url:, id:, source:)
     end
   end
 end

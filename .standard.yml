@@ -1,0 +1,3 @@
+# target the gemspec floor rather than whatever ruby happens to be installed,
+# so standard flags syntax that 3.2 cannot parse before ci does
+ruby_version: 3.2

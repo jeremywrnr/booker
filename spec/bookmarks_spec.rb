@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 # specs for Booker::Bookmarks and the value objects it hands back
 
-describe Booker::Bookmarks do
+RSpec.describe Booker::Bookmarks do
   before do
     @rawjson = JSON.parse(File.read(fixture_path("bookmarks.json")))
     @bookmarks = @rawjson["roots"]["bookmark_bar"]["children"]
@@ -185,7 +187,7 @@ describe Booker::Bookmarks do
   end
 end
 
-describe Booker::Bookmark do
+RSpec.describe Booker::Bookmark do
   it "should initialize with all attributes" do
     bookmark = Booker::Bookmark.new("folder/", "Test Title", "http://test.com", "123")
     expect(bookmark.folder).to eq("folder/")
@@ -205,9 +207,33 @@ describe Booker::Bookmark do
     bookmark = Booker::Bookmark.new("folder/", "UPPERCASE TITLE", "http://test.com", "123")
     expect(bookmark.title).to eq("uppercase title")
   end
+
+  # value semantics the hand rolled class never had. the parsers still build
+  # bookmarks positionally, so both call styles have to keep working
+  it "compares by value rather than by identity" do
+    a = Booker::Bookmark.new("folder/", "Title", "http://test.com", "1")
+    b = Booker::Bookmark.new(folder: "folder/", title: "Title", url: "http://test.com", id: "1")
+    expect(a).to eq(b)
+    expect(a.hash).to eq(b.hash)
+  end
+
+  it "is frozen once built" do
+    expect(Booker::Bookmark.new("folder/", "Title", "http://test.com", "1")).to be_frozen
+  end
+
+  it "leaves source nil unless a parser sets it" do
+    expect(Booker::Bookmark.new("folder/", "T", "http://test.com", "1").source).to be_nil
+    expect(Booker::Bookmark.new("folder/", "T", "http://test.com", "1", "safari").source)
+      .to eq("safari")
+  end
+
+  it "cleans the title again when copied with #with" do
+    bookmark = Booker::Bookmark.new("folder/", "Title", "http://test.com", "1")
+    expect(bookmark.with(title: "Other: Title").title).to eq("other  title")
+  end
 end
 
-describe Booker::Folder do
+RSpec.describe Booker::Folder do
   it "should initialize with title and json" do
     json_data = [{"name" => "Test", "type" => "url"}]
     folder = Booker::Folder.new(json_data, "test/")
@@ -236,7 +262,7 @@ describe Booker::Folder do
   end
 end
 
-describe "Multi-source bookmarks" do
+RSpec.describe "Multi-source bookmarks" do
   describe "with multiple sources" do
     before do
       # Mock multiple bookmark sources
@@ -308,7 +334,7 @@ describe "Multi-source bookmarks" do
   end
 end
 
-describe "#autocomplete_raw" do
+RSpec.describe "#autocomplete_raw" do
   before do
     allow_any_instance_of(Booker::Config).to receive(:bookmarks).and_return([fixture_path("bookmarks.json")])
     @bm = Booker::Bookmarks.new

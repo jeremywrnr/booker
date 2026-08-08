@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Coverage must start before booker is loaded, or its lines go untracked.
 # Opt-in via COVERAGE=1 so a plain `just spec` stays fast: `just cov`
 if ENV["COVERAGE"]
@@ -45,25 +47,38 @@ ensure
   $stdout = old_stdout
 end
 
-# Redirect stderr and stdout while testing
-SILENT = true
-if SILENT
-  RSpec.configure do |config|
-    original_stderr = $stderr
+# diagnostics go to stderr, so that a warning raised while parsing can never
+# land in the middle of the --complete-raw feed the shell scripts read
+def capture_stderr
+  old_stderr = $stderr
+  $stderr = StringIO.new
+  yield
+  $stderr.string
+ensure
+  $stderr = old_stderr
+end
+
+RSpec.configure do |config|
+  # no `should`, and no describe/it on every object in the process - example
+  # groups say RSpec.describe instead
+  config.disable_monkey_patching!
+
+  # booker prints constantly and the suite drives its cli directly, so the
+  # noise has to go somewhere. per example rather than per file: the redirect
+  # is torn down before rspec reports, so a failure still prints its own
+  # message, and `capture_stdout` / the `output` matcher nest inside this
+  config.around(:each) do |example|
     original_stdout = $stdout
-    config.before(:all) do
-      $stderr = File.open(File::NULL, "w")
-      $stdout = File.open(File::NULL, "w")
-    end
-
-    config.after(:all) do
-      $stderr = original_stderr
+    original_stderr = $stderr
+    $stdout = File.open(File::NULL, "w")
+    $stderr = File.open(File::NULL, "w")
+    begin
+      example.run
+    ensure
+      $stdout.close
+      $stderr.close
       $stdout = original_stdout
-    end
-
-    # allow old and new RSPEC syntax
-    config.expect_with(:rspec) do |c|
-      c.syntax = [:should, :expect]
+      $stderr = original_stderr
     end
   end
 end
@@ -87,9 +102,9 @@ RSpec::Matchers.define :exit_with_code do |code|
       (actual.nil? ? " not called" : "(#{actual}) was called")
   end
   failure_message_when_negated do |block|
-    "expected block not to call exit(#{exp_code})"
+    "expected block not to call exit(#{code})"
   end
   description do
-    "expect block to call exit(#{exp_code})"
+    "expect block to call exit(#{code})"
   end
 end

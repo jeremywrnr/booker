@@ -1,17 +1,24 @@
+# frozen_string_literal: true
+
 # everything behind `booker --install`: shell completion, the config file,
 # finding browser bookmarks, and the opt-in safari permission walkthrough
 
 require "find"
 require "fileutils"
 require "shellwords"
+require "open3"
+
+require_relative "output"
+
+using Booker::Colors
 
 module Booker
   class Installer
     include Output
 
     # shells we ship completion for, and where those scripts live
-    SHELLS = %w[zsh bash fish]
-    COMPLETIONS_DIR = File.expand_path("../../completions", __dir__)
+    SHELLS = %w[zsh bash fish].freeze
+    COMPLETIONS_DIR = File.expand_path("../../completions", __dir__).freeze
 
     # if any of these exist, bash-completion is installed and will autoload our
     # script out of the XDG user directory
@@ -20,7 +27,7 @@ module Booker
       "/etc/bash_completion",
       "/usr/local/etc/profile.d/bash_completion.sh",
       "/opt/homebrew/etc/profile.d/bash_completion.sh"
-    ]
+    ].freeze
 
     def install(args)
       target = args.shift
@@ -71,9 +78,11 @@ module Booker
     end
 
     def install_completion_zsh
-      # check if zsh is even installed for this user
+      # check if zsh is even installed for this user - capture3 raises
+      # Errno::ENOENT when it is not, same as the backtick this replaces
       begin
-        fpath = `zsh -c 'echo $fpath'`.split(" ")
+        out, _err, _status = Open3.capture3("zsh", "-c", "echo $fpath")
+        fpath = out.split(" ")
       rescue
         pexit "Failure: ".red + "zsh is probably not installed, could not find $fpath", 1
       end
@@ -125,7 +134,7 @@ module Booker
         begin
           completion_file = File.join(fp, "_booker")
           File.write(completion_file, completion_script("_booker"))
-          system "zsh -c 'autoload -U _booker'"
+          system("zsh", "-c", "autoload -U _booker")
           puts "Success: ".grn + "installed zsh autocompletion in #{fp}"
           success = true
           break

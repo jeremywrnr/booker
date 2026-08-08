@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 # specs for Booker::Config, Booker::OS and Booker::Browser
 
-describe Booker::Config do
+RSpec.describe Booker::Config do
   it "bookmarks method should return an array" do
     config = Booker::Config.new
     result = config.bookmarks
@@ -50,7 +52,7 @@ describe Booker::Config do
   end
 end
 
-describe "Booker::Browser module" do
+RSpec.describe "Booker::Browser module" do
   include Booker::Browser
 
   describe "#browse" do
@@ -130,13 +132,13 @@ describe "Booker::Browser module" do
   end
 end
 
-describe Booker::OS do
+RSpec.describe Booker::OS do
   it "identifies exactly one platform for the host it runs on" do
     expect([Booker::OS.windows?, Booker::OS.mac?, Booker::OS.linux?].count(true)).to eq(1)
   end
 end
 
-describe "Booker::Config file handling" do
+RSpec.describe "Booker::Config file handling" do
   # allocate skips initialize, which would read the developer's real ~/.booker.yml
   let(:config) { Booker::Config.allocate }
 
@@ -149,6 +151,24 @@ describe "Booker::Config file handling" do
       bad = File.join(tmp, "bad.yml")
       File.write(bad, "searcher: [unclosed\n")
       expect(config.read(bad)).to be false
+    end
+  end
+
+  # psych 4 stopped allowing aliases by default, so a config using anchors
+  # raises AliasesNotEnabled rather than SyntaxError - it still has to fall back
+  it "falls back to defaults when the config file uses yaml anchors" do
+    Dir.mktmpdir do |tmp|
+      aliased = File.join(tmp, "aliased.yml")
+      File.write(aliased, ":searcher: &s https://example.com/?q=\n:browser: *s\n")
+      expect(config.read(aliased)).to be false
+    end
+  end
+
+  it "round trips the symbol keys #write emits" do
+    Dir.mktmpdir do |tmp|
+      target = File.join(tmp, ".booker.yml")
+      File.write(target, {searcher: "https://example.com/?q=", bookmarks: ["/a"]}.to_yaml)
+      expect(config.read(target)).to eq(searcher: "https://example.com/?q=", bookmarks: ["/a"])
     end
   end
 
@@ -176,7 +196,7 @@ describe "Booker::Config file handling" do
   end
 end
 
-describe "Booker::Config against a home with no browsers" do
+RSpec.describe "Booker::Config against a home with no browsers" do
   # HOME is read into a constant at load time, so these stub it rather than
   # touching ENV - and they never depend on what the developer has installed
   around do |example|

@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 # specs for Booker::Installer: completion, config and bookmark discovery
 
-describe "shell completion" do
+RSpec.describe "shell completion" do
   # Booker#initialize immediately parses argv, so build a bare instance to
   # exercise the install/read helpers on their own
   let(:booker) { Booker::Installer.new }
@@ -122,7 +124,7 @@ describe "shell completion" do
   end
 end
 
-describe "#parse_firefox_profiles" do
+RSpec.describe "#parse_firefox_profiles" do
   let(:booker) { Booker::Installer.new }
 
   around do |example|
@@ -179,7 +181,7 @@ describe "#parse_firefox_profiles" do
   end
 end
 
-describe "#bookmark_type_label" do
+RSpec.describe "#bookmark_type_label" do
   let(:booker) { Booker::Installer.new }
 
   it "labels each known browser" do
@@ -193,16 +195,29 @@ describe "#bookmark_type_label" do
   end
 
   it "colors the label only when asked to" do
+    # color: true asks for the escape codes; whether they are actually emitted
+    # is then up to Colors.enabled?, and the suite's $stdout is not a terminal
+    Booker::Colors.enabled = true
+
     %i[chrome firefox safari opera].each do |type|
       plain = booker.bookmark_type_label(type)
       expect(booker.bookmark_type_label(type, color: true)).to include(plain)
     end
 
     expect(booker.bookmark_type_label(:chrome, color: true)).not_to eq("[Chrome]")
+  ensure
+    Booker::Colors.enabled = nil
+  end
+
+  it "stays plain even when asked for color, if color is switched off" do
+    Booker::Colors.enabled = false
+    expect(booker.bookmark_type_label(:chrome, color: true)).to eq("[Chrome]")
+  ensure
+    Booker::Colors.enabled = nil
   end
 end
 
-describe "#install_bookmarks" do
+RSpec.describe "#install_bookmarks" do
   let(:booker) { Booker::Installer.new }
 
   around do |example|
@@ -293,7 +308,7 @@ describe "#install_bookmarks" do
   end
 end
 
-describe "#install_config" do
+RSpec.describe "#install_config" do
   let(:booker) { Booker::Installer.new }
 
   it "reports where the example config landed" do
@@ -308,7 +323,7 @@ describe "#install_config" do
   end
 end
 
-describe "#install routing" do
+RSpec.describe "#install routing" do
   let(:booker) { Booker::Installer.new }
 
   before do
@@ -342,7 +357,7 @@ describe "#install routing" do
   end
 end
 
-describe "#install_safari" do
+RSpec.describe "#install_safari" do
   let(:booker) { Booker::Installer.new }
   let(:plist) { File.join(ENV["HOME"], "Library/Safari/Bookmarks.plist") }
 
@@ -408,7 +423,7 @@ describe "#install_safari" do
   end
 end
 
-describe "environment probes" do
+RSpec.describe "environment probes" do
   let(:booker) { Booker::Installer.new }
 
   it "detects a shell that exists, and one that does not" do

@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 # specs for Booker::CLI: turning argv into an action
 
-describe Booker::CLI do
+RSpec.describe Booker::CLI do
   def catch_exit
     yield
   rescue SystemExit
@@ -26,13 +28,13 @@ describe Booker::CLI do
   end
 
   it "should exit cleanly when no arguments are given" do
-    runblock("").should exit_with_code 0
+    expect(runblock("")).to exit_with_code 0
   end
 
   it "should refuse unrecognized flags" do
-    runblock("-goo?-gaah??").should exit_with_code 1
-    runblock("-world -goo?").should exit_with_code 1
-    runblock("--hello").should exit_with_code 1
+    expect(runblock("-goo?-gaah??")).to exit_with_code 1
+    expect(runblock("-world -goo?")).to exit_with_code 1
+    expect(runblock("--hello")).to exit_with_code 1
   end
 
   it "should handle unescaped chars in the url" do
@@ -42,13 +44,13 @@ describe Booker::CLI do
 
   %w[--bookmark -b --search -s].each do |opt|
     it "should have at least 1 cli arg for #{opt}" do
-      runblock(opt).should exit_with_code 1
+      expect(runblock(opt)).to exit_with_code 1
     end
   end
 
   %w[--version -v --help -h --complete -c].each do |opt|
     it "should accept valid option #{opt} without args" do
-      runblock(opt).should exit_with_code 0
+      expect(runblock(opt)).to exit_with_code 0
     end
   end
 
@@ -102,7 +104,7 @@ describe Booker::CLI do
   end
 end
 
-describe "Integration tests" do
+RSpec.describe "Integration tests" do
   before do
     allow_any_instance_of(Booker::Config).to receive(:bookmarks).and_return([fixture_path("bookmarks.json")])
   end
@@ -143,7 +145,7 @@ describe "Integration tests" do
   end
 end
 
-describe "argument dispatch" do
+RSpec.describe "argument dispatch" do
   # CLI#initialize parses argv immediately, so allocate one to poke at the
   # dispatch methods on their own
   let(:booker) { Booker::CLI.allocate }
@@ -185,7 +187,7 @@ describe "argument dispatch" do
   end
 end
 
-describe "bookmark ids handed over by tab completion" do
+RSpec.describe "bookmark ids handed over by tab completion" do
   # completion inserts an id from the raw feed, so every id that feed emits has
   # to come back as a bookmark rather than as a search term
   before do
@@ -218,7 +220,7 @@ describe "bookmark ids handed over by tab completion" do
   end
 end
 
-describe "the bookmark table" do
+RSpec.describe "the bookmark table" do
   # reads from the fixture rather than from whatever the developer has in
   # chrome, so the table rendering is exercised everywhere
   before do

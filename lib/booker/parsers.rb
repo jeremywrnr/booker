@@ -1,9 +1,16 @@
+# frozen_string_literal: true
+
 # one parser per browser: chrome keeps bookmarks in json, firefox in sqlite, and
 # safari in a binary plist. each turns its own format into Booker::Bookmark
 # objects, so Bookmarks itself never has to care which browser it is reading.
 
 require "json"
 require "fileutils"
+require "open3"
+
+require_relative "output"
+
+using Booker::Colors
 
 module Booker
   module Parsers
@@ -13,7 +20,9 @@ module Booker
 
       def initialize(file_path, search_term)
         @file_path = file_path
-        @searching = /#{search_term}/i
+        # escaped, not interpolated: the term comes straight off ARGV, so
+        # `booker "c++"` used to raise RegexpError before it ever searched
+        @searching = Regexp.new(Regexp.escape(search_term), Regexp::IGNORECASE)
         @allurls = []
       end
 
@@ -22,9 +31,7 @@ module Booker
         raise NotImplementedError, "Subclasses must implement parse method"
       end
 
-      def results
-        @allurls
-      end
+      def results = @allurls
 
       protected
 
@@ -40,8 +47,8 @@ module Booker
           local_bookmarks = JSON.parse(File.read(@file_path))
           @chrome_bookmarks = local_bookmarks["roots"]["bookmark_bar"]["children"]
         rescue
-          puts "Warning: ".yel + "Bookmarks file not found or invalid."
-          puts "Suggest: ".grn + "booker --install bookmarks"
+          warn "Warning: ".yel + "Bookmarks file not found or invalid."
+          warn "Suggest: ".grn + "booker --install bookmarks"
           @chrome_bookmarks = []
           return
         end
@@ -62,7 +69,9 @@ module Booker
         checking = [base, link["name"], link["url"], link["id"]]
         if matches_search?(checking)
           if link["type"] == "url"
-            @allurls.push(Bookmark.new(base, link["name"], link["url"], link["id"]))
+            @allurls.push(Bookmark.new(
+              folder: base, title: link["name"], url: link["url"], id: link["id"]
+            ))
           end
         end
       end
@@ -82,24 +91,31 @@ module Booker
         begin
           require "sqlite3"
         rescue LoadError
-          puts "Error: ".red + "sqlite3 gem not installed"
-          puts "Run: ".grn + "gem install sqlite3"
+          warn "Error: ".red + "sqlite3 gem not installed"
+          warn "Run: ".grn + "gem install sqlite3"
           return
         end
 
-        db_path = @file_path
-
-        # Copy database to temp file if Firefox is running (to avoid lock)
+        # Copy database to temp file if Firefox is running (to avoid lock).
+        # Tempfile.create removes the copy when the block ends, so there is no
+        # unlink left to remember in an ensure further down
         if firefox_running?
           require "tempfile"
-          temp = Tempfile.new(["places", ".sqlite"])
-          temp.close
-          FileUtils.cp(@file_path, temp.path)
-          db_path = temp.path
+          Tempfile.create(["places", ".sqlite"]) do |temp|
+            temp.close
+            FileUtils.cp(@file_path, temp.path)
+            query_places(temp.path)
+          end
+        else
+          query_places(@file_path)
         end
+      end
 
-        begin
-          db = SQLite3::Database.new(db_path)
+      private
+
+      def query_places(db_path)
+        # the block form closes the handle for us, on the error path too
+        SQLite3::Database.new(db_path) do |db|
           db.results_as_hash = true
 
           # Recursive CTE query to build folder paths
@@ -137,39 +153,27 @@ module Booker
             values = [folder_path, row["title"], row["url"], row["id"].to_s]
             if matches_search?(values)
               @allurls << Bookmark.new(
-                folder_path,
-                row["title"] || "",
-                row["url"] || "",
-                row["id"].to_s
+                folder: folder_path,
+                title: row["title"] || "",
+                url: row["url"] || "",
+                id: row["id"].to_s
               )
             end
           end
-        rescue SQLite3::Exception => e
-          puts "Error: ".red + "Could not read Firefox bookmarks database"
-          puts e.message
-        ensure
-          db&.close
-          temp&.unlink
         end
+      rescue SQLite3::Exception => e
+        warn "Error: ".red + "Could not read Firefox bookmarks database"
+        warn e.message
       end
 
-      private
-
       def firefox_running?
-        # Simple check - try to get a shared lock
-        # If Firefox is running, it has an exclusive lock
         return false unless File.exist?(@file_path)
 
-        begin
-          File.open(@file_path, "r") do |f|
-            # If we can open for reading, Firefox might still be running
-            # but we'll handle it by copying to temp
-          end
-          # Check for Firefox process
-          `pgrep -x firefox 2>/dev/null`.strip != ""
-        rescue
-          false
-        end
+        # Check for Firefox process
+        out, _err, _status = Open3.capture3("pgrep", "-x", "firefox")
+        !out.strip.empty?
+      rescue
+        false
       end
     end
 
@@ -186,7 +190,7 @@ module Booker
           root_node = plist_el.elements.to_a.first
           root = parse_node(root_node)
         rescue => e
-          puts "Warning: ".yel + "Could not parse Safari bookmarks: #{e.message}"
+          warn "Warning: ".yel + "Could not parse Safari bookmarks: #{e.message}"
           return
         end
 
@@ -201,14 +205,16 @@ module Booker
         # (macOS-only); the JSON converter rejects <data>/<date> fields, so xml1.
         return contents if contents.start_with?("<?xml") || contents.include?("<plist")
 
-        output = IO.popen(["plutil", "-convert", "xml1", "-o", "-", path], err: File::NULL, &:read)
-        return output if $?.success?
+        # capture3 hands back the status directly, rather than leaving it in the
+        # $? global for the next line to read
+        output, _err, status = Open3.capture3("plutil", "-convert", "xml1", "-o", "-", path)
+        return output if status.success?
 
-        puts "Warning: ".yel + "Could not read Safari bookmarks file."
-        puts "Suggest: ".grn + "grant terminal 'Full Disk Access' in System Settings"
+        warn "Warning: ".yel + "Could not read Safari bookmarks file."
+        warn "Suggest: ".grn + "grant terminal 'Full Disk Access' in System Settings"
         nil
       rescue Errno::ENOENT
-        puts "Warning: ".yel + "Safari bookmarks file not found."
+        warn "Warning: ".yel + "Safari bookmarks file not found."
         nil
       end
 
@@ -263,7 +269,7 @@ module Booker
 
         values = [folder, title, url, id]
         if matches_search?(values)
-          @allurls << Bookmark.new(folder, title, url, id)
+          @allurls << Bookmark.new(folder:, title:, url:, id:)
         end
       end
     end
