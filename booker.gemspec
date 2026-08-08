@@ -1,4 +1,7 @@
-require_relative "lib/booker"
+# Scrape the version instead of loading booker: bundler evaluates this file
+# before the specs start SimpleCov, and anything loaded first goes untracked.
+booker_version = File.read(File.expand_path("lib/booker.rb", __dir__))
+  .slice(/@version\s*=\s*"([^"]+)"/, 1)
 
 Gem::Specification.new do |g|
   g.name = "booker"
@@ -11,7 +14,7 @@ Gem::Specification.new do |g|
     preferred search engine.
   EOF
 
-  g.version = Booker.version
+  g.version = booker_version
   g.platform = Gem::Platform::RUBY
 
   g.author = "Jeremy Warner"
@@ -28,6 +31,7 @@ Gem::Specification.new do |g|
   g.add_runtime_dependency "sqlite3", "~> 2.9", ">= 2.9.5"
   g.add_runtime_dependency "rexml", "~> 3.4"
   g.add_development_dependency "rspec", "~> 3.13"
+  g.add_development_dependency "simplecov", "~> 0.22"
   g.add_development_dependency "standard", "~> 1.56"
   g.post_install_message = "To add zsh, bash, or fish completion run: booker --install"
 end

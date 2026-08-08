@@ -20,8 +20,16 @@ format:
 lint:
     bundle exec standardrb
 
-# Everything CI checks: tests and lint
-ci: spec lint
+# Run tests with a coverage report
+cov:
+    @COVERAGE=1 bundle exec rspec --color --format progress
+
+# Open the HTML coverage report
+cov-html: cov
+    open coverage/index.html
+
+# Everything CI checks: tests with coverage, then lint
+ci: cov lint
 
 # Build and install the gem
 build:

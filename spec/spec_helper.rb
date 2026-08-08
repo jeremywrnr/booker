@@ -1,3 +1,15 @@
+# Coverage must start before booker is loaded, or its lines go untracked.
+# Opt-in via COVERAGE=1 so a plain `just spec` stays fast: `just cov`
+if ENV["COVERAGE"]
+  require "simplecov"
+  SimpleCov.start do
+    add_filter "/spec/"
+    # floor sits just under the current 72%, to catch regressions without
+    # tripping on ordinary refactors -- raise it as coverage improves
+    minimum_coverage line: 70
+  end
+end
+
 require_relative "../lib/booker"
 require "rubygems"
 require "rspec"
