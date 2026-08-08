@@ -36,6 +36,7 @@ Gem::Specification.new do |g|
   g.metadata = {
     "source_code_uri" => g.homepage,
     "bug_tracker_uri" => "#{g.homepage}/issues",
+    "changelog_uri" => "#{g.homepage}/blob/main/CHANGELOG.md",
     "rubygems_mfa_required" => "true"
   }
 
