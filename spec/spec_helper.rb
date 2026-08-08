@@ -1,3 +1,16 @@
+# Coverage must start before booker is loaded, or its lines go untracked.
+# Opt-in via COVERAGE=1 so a plain `just spec` stays fast: `just cov`
+if ENV["COVERAGE"]
+  require "simplecov"
+  SimpleCov.start do
+    add_filter "/spec/"
+    # Coverage is platform dependent: some safari/plutil/open paths only run on
+    # a mac, so linux reports a little under what a mac does. The floor has to
+    # clear the lower of the two, since CI measures coverage on linux.
+    minimum_coverage line: 70
+  end
+end
+
 require_relative "../lib/booker"
 require "rubygems"
 require "rspec"

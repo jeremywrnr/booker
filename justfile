@@ -16,6 +16,21 @@ spec:
 format:
     bundle exec standardrb --fix
 
+# Check formatting without changing files
+lint:
+    bundle exec standardrb
+
+# Run tests with a coverage report
+cov:
+    @COVERAGE=1 bundle exec rspec --color --format progress
+
+# Open the HTML coverage report
+cov-html: cov
+    open coverage/index.html
+
+# Everything CI checks: tests with coverage, then lint
+ci: cov lint
+
 # Build and install the gem
 build:
     gem build {{gem_name}}.gemspec

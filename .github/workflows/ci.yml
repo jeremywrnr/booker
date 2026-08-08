@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        ruby-version: ["3.2", "3.3", "3.4", "4.0"]
+        include:
+          # booker reads macOS paths (Safari plist, open) - check there too
+          - os: macos-latest
+            ruby-version: "4.0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Run tests
+        if: matrix.ruby-version != '4.0' || matrix.os != 'ubuntu-latest'
+        run: just spec
+
+      # the primary job runs the same recipe you run before pushing
+      - name: Run full check (coverage, lint)
+        if: matrix.ruby-version == '4.0' && matrix.os == 'ubuntu-latest'
+        run: just ci
+
+      # uploaded even when the check fails, since that is when you want to read it
+      - name: Upload coverage
+        if: ${{ !cancelled() && matrix.ruby-version == '4.0' && matrix.os == 'ubuntu-latest' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
