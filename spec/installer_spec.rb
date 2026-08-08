@@ -91,6 +91,90 @@ RSpec.describe "shell completion" do
       expect(File.exist?(File.join(@home, ".zsh/completion/_booker"))).to be true
     end
 
+    # every $fpath entry the real zsh reports is outside this temp HOME, so the
+    # install falls through to creating ~/.zsh/completion - which zsh only reads
+    # once ~/.zshrc puts it on $fpath, hence the rc file edits below
+    describe "wiring ~/.zshrc up to the created completion dir" do
+      # pinned rather than inherited from the machine's zsh: a developer whose
+      # $fpath happens to hold a writable dir would otherwise skip this branch
+      before do
+        allow(Open3).to receive(:capture3)
+          .with("zsh", "-c", "echo $fpath")
+          .and_return(["/usr/share/zsh/site-functions\n", "", nil])
+        allow(booker).to receive(:system)
+      end
+
+      it "adds the fpath lines when zshrc does not mention the dir yet" do
+        zshrc = File.join(@home, ".zshrc")
+        File.write(zshrc, "export EDITOR=vim\n")
+
+        output = capture_stdout { booker.install_completion_zsh }
+
+        expect(File.read(zshrc)).to include("fpath=(~/.zsh/completion $fpath)")
+        expect(File.read(zshrc)).to include("autoload -Uz compinit && compinit")
+        # the original contents survive the append
+        expect(File.read(zshrc)).to include("export EDITOR=vim")
+        expect(output).to match(/Added completion to ~\/.zshrc/)
+      end
+
+      it "leaves an already configured zshrc alone" do
+        zshrc = File.join(@home, ".zshrc")
+        File.write(zshrc, "fpath=(~/.zsh/completion $fpath)\n")
+
+        output = capture_stdout { booker.install_completion_zsh }
+
+        expect(File.read(zshrc).scan("fpath=(").length).to eq(1)
+        expect(output).to match(/already configured/)
+      end
+
+      it "prints the line to add by hand when there is no zshrc" do
+        output = capture_stdout { booker.install_completion_zsh }
+
+        expect(File.exist?(File.join(@home, ".zshrc"))).to be false
+        expect(output).to match(/Add this to your ~\/.zshrc/)
+      end
+    end
+
+    it "exits when zsh is not installed to report an $fpath" do
+      allow(Open3).to receive(:capture3)
+        .with("zsh", "-c", "echo $fpath")
+        .and_raise(Errno::ENOENT)
+
+      expect { capture_stdout { booker.install_completion_zsh } }.to raise_error(SystemExit)
+    end
+
+    # nothing writable in $fpath and no home dir to fall back on: booker cannot
+    # fix this itself, so it says what to run rather than failing silently
+    it "explains the manual fix when no fpath dir can be written" do
+      allow(Open3).to receive(:capture3)
+        .with("zsh", "-c", "echo $fpath")
+        .and_return(["/nonexistent/site-functions\n", "", nil])
+      allow(FileUtils).to receive(:mkdir_p).and_raise(Errno::EACCES)
+
+      output = capture_stdout { booker.install_completion_zsh }
+
+      expect(output).to match(/Could not install ZSH completion/)
+      expect(output).to match(/mkdir -p ~\/.zsh\/completion && booker --install zsh/)
+    end
+
+    it "warns rather than raising when bash completion cannot be written" do
+      allow(FileUtils).to receive(:mkdir_p).and_raise(Errno::EACCES, "read-only")
+
+      output = capture_stdout { booker.install_completion_bash }
+
+      expect(output).to match(/could not install bash completion/)
+      expect(output).to include("read-only")
+    end
+
+    it "warns rather than raising when fish completion cannot be written" do
+      allow(FileUtils).to receive(:mkdir_p).and_raise(Errno::EACCES, "read-only")
+
+      output = capture_stdout { booker.install_completion_fish }
+
+      expect(output).to match(/could not install fish completion/)
+      expect(output).to include("read-only")
+    end
+
     it "installs every detected shell at once" do
       allow(booker).to receive(:shell_present?).and_return(true)
       allow(booker).to receive(:bash_completion_present?).and_return(false)

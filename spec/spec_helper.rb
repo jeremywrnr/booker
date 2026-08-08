@@ -6,10 +6,10 @@ if ENV["COVERAGE"]
   require "simplecov"
   SimpleCov.start do
     add_filter "/spec/"
-    # Coverage is platform dependent: some safari/plutil/open paths only run on
-    # a mac, so linux reports a little under what a mac does. The floor has to
-    # clear the lower of the two, since CI measures coverage on linux.
-    minimum_coverage line: 95
+    # Every platform specific path - safari/plutil, open, the darwin checks - is
+    # stubbed rather than shelled out to, so mac and linux report the same
+    # number and the floor can sit at the top. CI measures coverage on linux.
+    minimum_coverage line: 100
   end
 end
 

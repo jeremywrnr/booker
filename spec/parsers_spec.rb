@@ -3,6 +3,13 @@
 # specs for the per browser parsers, against the fixtures in spec/fixtures
 
 RSpec.describe Booker::Parsers::Base do
+  # Base is abstract: the browser specific work lives in the subclasses, so a
+  # subclass that forgets #parse should say so rather than silently do nothing
+  it "refuses to parse without a subclass implementation" do
+    parser = Booker::Parsers::Base.new("/nonexistent", "")
+    expect { parser.parse }.to raise_error(NotImplementedError, /must implement parse/)
+  end
+
   describe "parser detection" do
     it "Booker::Parsers::Chrome should be detected for JSON files" do
       bookmarks = Booker::Bookmarks.new
@@ -159,6 +166,23 @@ RSpec.describe Booker::Parsers::Base do
       expect(bm.folder).to include("bookmarksbar")
     end
 
+    # a truncated or corrupt plist still looks like xml to convert_plist_to_xml,
+    # so the REXML failure has to be caught here rather than reaching the user
+    it "warns instead of raising on a corrupt plist" do
+      Dir.mktmpdir do |tmp|
+        broken = File.join(tmp, "Bookmarks.plist")
+        File.write(broken, "<plist version=\"1.0\"><dict><key>Children</key>")
+
+        parser = Booker::Parsers::Safari.new(broken, "")
+        err = nil
+        out = capture_stdout { err = capture_stderr { parser.parse } }
+
+        expect(err).to match(/Could not parse Safari bookmarks/)
+        expect(out).to eq("")
+        expect(parser.results).to be_empty
+      end
+    end
+
     it "should use WebBookmarkUUID as the bookmark id" do
       parser = Booker::Parsers::Safari.new(fixture, "olympics")
       parser.parse
@@ -237,6 +261,14 @@ RSpec.describe Booker::Parsers::Firefox do
     File.write(@db_path, "this is not a database")
     expect(parse).to be_empty
   end
+
+  # pgrep is not installed everywhere - a missing binary means "assume firefox
+  # is not holding the file", not a crash halfway through a parse
+  it "treats a missing pgrep as firefox not running" do
+    parser = Booker::Parsers::Firefox.new(@db_path, "")
+    allow(Open3).to receive(:capture3).and_raise(Errno::ENOENT)
+    expect(parser.send(:firefox_running?)).to be false
+  end
 end
 
 RSpec.describe "plist scalars" do
@@ -262,6 +294,26 @@ RSpec.describe "plist scalars" do
       "s" => "hi", "i" => 7, "r" => 1.5,
       "t" => true, "f" => false, "d" => "2026-01-01T00:00:00Z"
     })
+  end
+
+  # the real plutil is only on a mac, so the "it ran and refused" branch is
+  # stubbed - otherwise linux reaches Errno::ENOENT instead and never sees it
+  it "points at Full Disk Access when plutil refuses to read the file" do
+    Dir.mktmpdir do |tmp|
+      binary = File.join(tmp, "Bookmarks.plist")
+      File.write(binary, "bplist00\x00\x01")
+      status = instance_double(Process::Status, success?: false)
+      allow(Open3).to receive(:capture3)
+        .with("plutil", "-convert", "xml1", "-o", "-", binary)
+        .and_return(["", "Operation not permitted", status])
+
+      parser = Booker::Parsers::Safari.new(binary, "")
+      err = capture_stderr { parser.parse }
+
+      expect(err).to match(/Could not read Safari bookmarks file/)
+      expect(err).to match(/Full Disk Access/)
+      expect(parser.results).to be_empty
+    end
   end
 
   it "reaches for plutil when the file is not already xml" do
