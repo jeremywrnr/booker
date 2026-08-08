@@ -529,3 +529,48 @@ RSpec.describe "environment probes" do
     expect(booker.safari_readable?("/nonexistent/Bookmarks.plist")).to be_falsey
   end
 end
+
+RSpec.describe "Booker::Installer clearing the zsh completion cache" do
+  # a new completion file is invisible to a shell whose compinit dump still
+  # describes the old one, so installing has to drop the dump
+  let(:installer) { Booker::Installer.new }
+
+  it "removes every compinit dump it finds" do
+    Dir.mktmpdir do |tmp|
+      stub_const("ENV", ENV.to_hash.merge("ZDOTDIR" => tmp))
+      dumps = [".zcompdump", ".zcompdump-HOST-5.9", ".zcompdump-HOST-5.9.zwc"]
+      dumps.each { |d| File.write(File.join(tmp, d), "stale") }
+
+      expect(capture_stdout { installer.clear_zsh_compdump }).to include("Refreshed")
+      expect(Dir.glob(File.join(tmp, ".zcompdump*"))).to be_empty
+    end
+  end
+
+  it "says nothing when there is no dump to clear" do
+    Dir.mktmpdir do |tmp|
+      stub_const("ENV", ENV.to_hash.merge("ZDOTDIR" => tmp))
+      expect(capture_stdout { installer.clear_zsh_compdump }).to eq("")
+    end
+  end
+
+  it "does not fail the install over a dump it cannot remove" do
+    Dir.mktmpdir do |tmp|
+      stub_const("ENV", ENV.to_hash.merge("ZDOTDIR" => tmp))
+      File.write(File.join(tmp, ".zcompdump"), "stale")
+      allow(File).to receive(:delete).and_raise(Errno::EACCES)
+
+      expect { capture_stdout { installer.clear_zsh_compdump } }.not_to raise_error
+    end
+  end
+
+  it "falls back to home when ZDOTDIR is unset" do
+    Dir.mktmpdir do |tmp|
+      stub_const("ENV", ENV.to_hash.except("ZDOTDIR"))
+      allow(installer).to receive(:home).and_return(tmp)
+      File.write(File.join(tmp, ".zcompdump"), "stale")
+
+      capture_stdout { installer.clear_zsh_compdump }
+      expect(Dir.glob(File.join(tmp, ".zcompdump*"))).to be_empty
+    end
+  end
+end

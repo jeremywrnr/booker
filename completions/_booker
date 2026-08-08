@@ -33,13 +33,38 @@ _booker_bookmarks() {
     BLUE=`echo -e "\033[4;34m"`
     RESET=`echo -e "\033[0;0m"`
 
-    #parse parts, color. the p flag makes zsh read \t as a real tab
+    #parse parts, color. the p flag makes zsh read \t as a real tab.
+    #
+    #every description has to fit on one screen line. -l below prints one match
+    #per line and zsh sizes the list on that basis, so a description that wraps
+    #makes the geometry wrong by however many lines it spilled onto - the menu
+    #then redraws over itself and over the scrollback above it. browsers happily
+    #store a whole page blurb as a title, so this is not a rare case: only the
+    #display is trimmed, and `urls` keeps the full link that actually gets
+    #inserted
+    #the colour escapes below are characters zsh counts when it sizes the list
+    #but the terminal draws as nothing, so the budget has to leave room for
+    #them (13) on top of a margin. erring small only trims a title slightly
+    #early; erring large puts the wrapping back
+    local -i width=$(( ${COLUMNS:-100} - 16 ))
+    (( width < 40 )) && width=40
     local -a urls links
     for bookmark in ${bookmarks[@]}; do
         local -a split
         split=("${(@ps:\t:)bookmark}")
         urls+=( $split[3] )
-        links+=("$split[2] $BLUE$split[3]$RESET")
+
+        #the url is the useful half, but cap it so one long link cannot crowd
+        #the title out entirely
+        local name=$split[2] link=$split[3]
+        local -i maxlink=$(( width / 2 ))
+        (( ${#link} > maxlink )) && link="${link[1,maxlink-1]}…"
+
+        local -i room=$(( width - ${#link} - 1 ))
+        (( room < 20 )) && room=20
+        (( ${#name} > room )) && name="${name[1,room-1]}…"
+
+        links+=("$name $BLUE$link$RESET")
     done
 
     #finally, add completions. the inserted value is the URL rather than the

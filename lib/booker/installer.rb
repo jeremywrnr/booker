@@ -97,9 +97,12 @@ module Booker
       if writable_dirs.empty?
         user_completion_dir = File.join(user_home, ".zsh", "completion")
         begin
+          # mkdir_p is happy either way, but saying "Created" every time a
+          # developer reinstalls is a small lie about what just happened
+          existed = File.directory?(user_completion_dir)
           FileUtils.mkdir_p(user_completion_dir)
           writable_dirs << user_completion_dir
-          puts "Created user completion directory: #{user_completion_dir}".yel
+          puts "Created user completion directory: #{user_completion_dir}".yel unless existed
 
           # Auto-configure .zshrc if it exists
           zshrc = File.join(user_home, ".zshrc")
@@ -143,10 +146,34 @@ module Booker
         end
       end
 
-      unless success
+      if success
+        clear_zsh_compdump
+      else
         puts "Warning: ".yel + "Could not install ZSH completion to any directory in $fpath"
         puts "Try manually: ".grn + "mkdir -p ~/.zsh/completion && booker --install zsh"
       end
+    end
+
+    # compinit caches what it found in $fpath, so a shell started against an old
+    # dump keeps describing the completion booker just replaced. the dump is
+    # only a cache - zsh rebuilds it on the next start - so dropping it is how a
+    # freshly installed script actually reaches a new shell.
+    #
+    # nothing here can help the shell you ran this from: zsh autoloads _booker
+    # once and keeps that copy for the life of the session, which is why the
+    # caller is told to unfunction it
+    def clear_zsh_compdump
+      base = ENV["ZDOTDIR"] || home
+      dumps = Dir.glob(File.join(base, ".zcompdump*"))
+      return if dumps.empty?
+
+      dumps.each do |dump|
+        File.delete(dump)
+      rescue
+        # a dump we cannot remove is not worth failing an install over
+      end
+
+      puts "Refreshed: ".grn + "zsh completion cache (rebuilds on next shell)"
     end
 
     # bash-completion (when installed) autoloads from the XDG user directory.

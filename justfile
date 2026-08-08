@@ -52,8 +52,8 @@ build:
     gem install {{gem_name}}-{{version}}.gem
     booker --install completion
     @echo ""
-    @echo "zsh caches _booker for the session. to pick it up in this shell:"
-    @echo "  unfunction _booker && autoload -U _booker"
+    @echo "new shells are ready. zsh keeps _booker for the life of a session,"
+    @echo "so to pick it up in THIS one:  unfunction _booker && autoload -U _booker"
 
 # Clean up gem files
 clean:
