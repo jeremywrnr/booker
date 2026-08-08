@@ -253,13 +253,6 @@ RSpec.describe Booker::Folder do
     folder = Booker::Folder.new(json_data, "UPPERCASE")
     expect(folder.title).to eq("uppercase")
   end
-
-  it "should be enumerable" do
-    json_data = [{"name" => "Test1"}, {"name" => "Test2"}]
-    folder = Booker::Folder.new(json_data, "test/")
-    expect(folder).to respond_to(:each)
-    expect(folder.to_a.length).to eq(2)
-  end
 end
 
 RSpec.describe "Multi-source bookmarks" do

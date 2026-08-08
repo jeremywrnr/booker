@@ -41,6 +41,15 @@ module Booker
       # specs set this, and so does --list - same shape as Colors.enabled=
       attr_writer :enabled
 
+      # #enabled? and #select both ask for the command, so an interactive run
+      # worked it out twice; both memos outlive an example, so the suite drops
+      # them between them
+      def reset!
+        @enabled = nil
+        @command = nil
+        @command_known = false
+      end
+
       def enabled?
         return @enabled unless @enabled.nil?
 
@@ -57,16 +66,10 @@ module Booker
       # the configured picker, or fzf when it is on PATH. nil when neither is
       # installed, which is the signal to stay on booker's pre-picker behavior
       def command
-        configured = Config.new.picker
+        return @command if @command_known
 
-        # yaml reads a bare `:picker: false` as the boolean, and anyone writing
-        # that means "leave the picker off" - without this it would look like
-        # nothing was configured at all and quietly start fzf instead. a blank
-        # setting is the same request, and would leave nothing to look up
-        return nil if configured == false
-
-        argv = configured ? Shellwords.split(configured.to_s) : DEFAULT
-        (!argv.empty? && which(argv.first)) ? argv : nil
+        @command_known = true
+        @command = resolve_command
       end
 
       # no subshell to `which`: this runs before every interactive invocation,
@@ -113,6 +116,19 @@ module Booker
       end
 
       private
+
+      def resolve_command
+        configured = Config.default.picker
+
+        # yaml reads a bare `:picker: false` as the boolean, and anyone writing
+        # that means "leave the picker off" - without this it would look like
+        # nothing was configured at all and quietly start fzf instead. a blank
+        # setting is the same request, and would leave nothing to look up
+        return nil if configured == false
+
+        argv = configured ? Shellwords.split(configured.to_s) : DEFAULT
+        (!argv.empty? && which(argv.first)) ? argv : nil
+      end
 
       # one write, not one per bookmark. IO.popen hands back a synced IO, so
       # `puts` per line is an unbuffered syscall each - measured 10x slower

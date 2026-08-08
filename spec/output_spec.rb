@@ -44,9 +44,8 @@ RSpec.describe "String extensions" do
       expect(str.cyan).to include("\033[")
     end
 
-    it "should reset color codes" do
-      str = "test"
-      expect(str.reset).to include("\033[0;0m")
+    it "should close every sequence it opens" do
+      expect("test".red).to end_with("\033[0;0m")
     end
 
     it "should work on empty strings" do
@@ -61,7 +60,7 @@ RSpec.describe "String extensions" do
       Booker::Colors.enabled = false
       expect("test".red).to eq("test")
       expect("test".grn).to eq("test")
-      expect("test".reset).to eq("test")
+      expect(Booker::Colors.paint("test", :cyan)).to eq("test")
     end
 
     it "still windows and pads normally, so table layout is unaffected" do

@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 # specs for Booker::Installer: completion, config and bookmark discovery
+#
+# required explicitly: the installer is reachable only through --install, so
+# lib/booker leaves it for CLI#installer to load rather than paying for it on
+# every search and every tab press
+require_relative "../lib/booker/installer"
 
 RSpec.describe "shell completion" do
   # Booker#initialize immediately parses argv, so build a bare instance to
@@ -49,9 +54,6 @@ RSpec.describe "shell completion" do
       allow(Open3).to receive(:capture3)
         .with("zsh", "-c", "echo $fpath")
         .and_return(["/usr/share/zsh/site-functions\n", "", nil])
-      # the reload nudge after a successful write. nothing reads its result, and
-      # it is the same missing binary on linux
-      allow(booker).to receive(:system).with("zsh", "-c", "autoload -U _booker")
     end
 
     around do |example|
@@ -208,66 +210,9 @@ RSpec.describe "shell completion" do
     %w[zsh bash fish].each do |shell|
       it "routes --install #{shell} to just that shell" do
         expect(booker).to receive(:"install_completion_#{shell}")
-        expect { booker.install([shell]) }.to raise_error(SystemExit)
+        booker.install([shell])
       end
     end
-  end
-end
-
-RSpec.describe "#parse_firefox_profiles" do
-  let(:booker) { Booker::Installer.new }
-
-  around do |example|
-    Dir.mktmpdir do |tmp|
-      @base = tmp
-      example.run
-    end
-  end
-
-  def write_ini(body)
-    path = File.join(@base, "profiles.ini")
-    File.write(path, body)
-    path
-  end
-
-  def add_profile(name)
-    FileUtils.mkdir_p(File.join(@base, name))
-    FileUtils.touch(File.join(@base, name, "places.sqlite"))
-    File.join(@base, name, "places.sqlite")
-  end
-
-  it "returns the database of every profile that has one" do
-    first = add_profile("one.default")
-    second = add_profile("two.dev")
-    ini = write_ini(<<~INI)
-      [Profile0]
-      Name=default
-      Path=one.default
-
-      [Profile1]
-      Name=dev
-      Path=two.dev
-    INI
-
-    expect(booker.parse_firefox_profiles(ini, @base)).to contain_exactly(first, second)
-  end
-
-  it "skips profiles whose database has not been created yet" do
-    real = add_profile("real.default")
-    ini = write_ini(<<~INI)
-      [Profile0]
-      Path=real.default
-
-      [Profile1]
-      Path=ghost.default
-    INI
-
-    expect(booker.parse_firefox_profiles(ini, @base)).to eq([real])
-  end
-
-  it "returns nothing when no profile declares a path" do
-    ini = write_ini("[General]\nStartWithLastProfile=1\n")
-    expect(booker.parse_firefox_profiles(ini, @base)).to be_empty
   end
 end
 
@@ -324,6 +269,10 @@ RSpec.describe "#install_bookmarks" do
   end
 
   before do
+    # discovery reads the constant, which was frozen from ENV at load time, so
+    # the temp home above has to be said twice
+    stub_const("Booker::Config::HOME", @home)
+
     # record config writes rather than letting them reach a real ~/.booker.yml
     @written = []
     allow_any_instance_of(Booker::Config).to receive(:write) { |_instance, k, v| @written << [k, v] }
@@ -427,7 +376,7 @@ RSpec.describe "#install routing" do
       expect(booker).to receive(installer)
     end
 
-    expect { booker.install(["all"]) }.to raise_error(SystemExit)
+    booker.install(["all"])
   end
 
   {
@@ -438,7 +387,7 @@ RSpec.describe "#install routing" do
   }.each do |target, installer|
     it "routes #{target} to #{installer}" do
       expect(booker).to receive(installer)
-      expect { booker.install([target]) }.to raise_error(SystemExit)
+      booker.install([target])
     end
   end
 

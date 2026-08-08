@@ -90,6 +90,9 @@ _booker() {
         '(--bookmark)--bookmark[do bookmark completion]'\
         '(-c)-c[show bookmark completions]'\
         '(--complete)--complete[show bookmark completions]'\
+        '(--complete-raw)--complete-raw[tab completions, tab separated]'\
+        '(-l)-l[print the bookmark table, skipping the picker]'\
+        '(--list)--list[print the bookmark table, skipping the picker]'\
         '(-i)-i[perform installations (all, bookmarks, completion, config, safari)]'\
         '(--install)--install[perform installations (all, bookmarks, completion, config, safari)]'\
         '(-s)-s[search google for...]'\

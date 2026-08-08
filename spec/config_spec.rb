@@ -124,11 +124,76 @@ RSpec.describe "Booker::Browser module" do
       expect(prep("https://example.com")).to eq("https://example.com")
     end
   end
+end
 
-  describe "#wrap" do
-    it "should wrap URL in quotes" do
-      expect(wrap("example.com")).to eq('"example.com"')
+RSpec.describe "Booker::Sources.profiles" do
+  around do |example|
+    Dir.mktmpdir do |tmp|
+      @base = tmp
+      example.run
     end
+  end
+
+  def write_ini(body)
+    path = File.join(@base, "profiles.ini")
+    File.write(path, body)
+    path
+  end
+
+  def add_profile(name)
+    FileUtils.mkdir_p(File.join(@base, name))
+    FileUtils.touch(File.join(@base, name, "places.sqlite"))
+    File.join(@base, name, "places.sqlite")
+  end
+
+  it "returns the database of every profile that has one" do
+    first = add_profile("one.default")
+    second = add_profile("two.dev")
+    ini = write_ini(<<~INI)
+      [Profile0]
+      Name=default
+      Path=one.default
+
+      [Profile1]
+      Name=dev
+      Path=two.dev
+    INI
+
+    expect(Booker::Sources.profiles(ini, @base)).to contain_exactly(first, second)
+  end
+
+  it "skips profiles whose database has not been created yet" do
+    real = add_profile("real.default")
+    ini = write_ini(<<~INI)
+      [Profile0]
+      Path=real.default
+
+      [Profile1]
+      Path=ghost.default
+    INI
+
+    expect(Booker::Sources.profiles(ini, @base)).to eq([real])
+  end
+
+  it "returns nothing when no profile declares a path" do
+    ini = write_ini("[General]\nStartWithLastProfile=1\n")
+    expect(Booker::Sources.profiles(ini, @base)).to be_empty
+  end
+
+  # firefox writes the profile an install last used a second time, under
+  # [Install...], so counting Path= lines would offer the same database twice
+  it "lists a profile once even when the install section names it again" do
+    real = add_profile("one.default")
+    ini = write_ini(<<~INI)
+      [Profile0]
+      Path=one.default
+
+      [Install4F96D1932A9F858E]
+      Default=one.default
+      Path=one.default
+    INI
+
+    expect(Booker::Sources.profiles(ini, @base)).to eq([real])
   end
 end
 
@@ -229,6 +294,16 @@ RSpec.describe "Booker::Config against a home with no browsers" do
     File.write(File.join(profile, "Bookmarks"), "{}")
 
     expect(config.detect_default_bookmarks).to eq([File.join(profile, "Bookmarks")])
+  end
+
+  # a chrome directory booker cannot read is one source it does not offer, not
+  # a backtrace in the middle of an ordinary search
+  it "skips a chrome directory that cannot be walked" do
+    FileUtils.mkdir_p(File.join(@home, ".config/chromium"))
+    allow(Dir).to receive(:glob).and_raise(Errno::EACCES)
+
+    stub_const("Booker::Config::HOME", @home)
+    expect(Booker::Sources.discover).to be_empty
   end
 
   it "discovers the firefox profiles listed in profiles.ini" do

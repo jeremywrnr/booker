@@ -23,6 +23,10 @@ module Booker
         # escaped, not interpolated: the term comes straight off ARGV, so
         # `booker "c++"` used to raise RegexpError before it ever searched
         @searching = Regexp.new(Regexp.escape(search_term), Regexp::IGNORECASE)
+        # an empty term is the completion scripts' bare `booker <TAB>`, and //
+        # matches every field of every bookmark - so answer it once here rather
+        # than running four guaranteed matches per node
+        @match_all = search_term.empty?
         @allurls = []
       end
 
@@ -35,8 +39,10 @@ module Booker
 
       protected
 
+      # match? rather than match: this runs on every node of every source, and
+      # the MatchData the latter allocates is thrown away unread
       def matches_search?(values)
-        values.any? { |v| v && @searching.match(v.to_s) }
+        @match_all || values.any? { |v| v && @searching.match?(v.to_s) }
       end
     end
 
@@ -49,7 +55,6 @@ module Booker
         rescue
           warn "Warning: ".yel + "Bookmarks file not found or invalid."
           warn "Suggest: ".grn + "booker --install bookmarks"
-          @chrome_bookmarks = []
           return
         end
 
@@ -66,14 +71,12 @@ module Booker
       end
 
       def parse_link(base, link)
-        checking = [base, link["name"], link["url"], link["id"]]
-        if matches_search?(checking)
-          if link["type"] == "url"
-            @allurls.push(Bookmark.new(
-              folder: base, title: link["name"], url: link["url"], id: link["id"]
-            ))
-          end
-        end
+        return unless link["type"] == "url"
+        return unless matches_search?([base, link["name"], link["url"], link["id"]])
+
+        @allurls.push(Bookmark.new(
+          folder: base, title: link["name"], url: link["url"], id: link["id"]
+        ))
       end
 
       def parse_folder(base, link)
@@ -87,6 +90,25 @@ module Booker
 
     # Firefox bookmark parser (SQLite format)
     class Firefox < Base
+      class << self
+        # "is firefox running" is a question about the machine, not about a
+        # profile, so a config naming three profiles asked pgrep three times -
+        # a fork each, and the slowest single thing booker did on that config
+        attr_writer :running
+
+        def running?
+          return @running unless @running.nil?
+
+          out, _err, _status = Open3.capture3("pgrep", "-x", "firefox")
+          @running = !out.strip.empty?
+        rescue
+          @running = false
+        end
+
+        # the memo outlives a single example, so the suite drops it between them
+        def reset! = @running = nil
+      end
+
       def parse
         begin
           require "sqlite3"
@@ -148,7 +170,7 @@ module Booker
 
           db.execute(query).each do |row|
             folder_path = row["path"].to_s.split("/")[0..-2].join("/") + "/"
-            folder_path = "|" + folder_path.gsub(/[:,'"]/, "-").downcase
+            folder_path = "|" + Folder.normalize(folder_path)
 
             values = [folder_path, row["title"], row["url"], row["id"].to_s]
             if matches_search?(values)
@@ -166,15 +188,7 @@ module Booker
         warn e.message
       end
 
-      def firefox_running?
-        return false unless File.exist?(@file_path)
-
-        # Check for Firefox process
-        out, _err, _status = Open3.capture3("pgrep", "-x", "firefox")
-        !out.strip.empty?
-      rescue
-        false
-      end
+      def firefox_running? = File.exist?(@file_path) && self.class.running?
     end
 
     # Safari bookmark parser (binary plist format)
@@ -200,10 +214,14 @@ module Booker
       private
 
       def convert_plist_to_xml(path)
-        contents = File.read(path)
+        # sniff the head rather than reading the whole file: on the binary path
+        # the contents are thrown away and plutil reads it again from disk, and
+        # a real Bookmarks.plist grows with the user's bookmarks
+        head = File.binread(path, 512).to_s
+
         # Already an XML plist (fixtures, non-macOS). Binary plists need plutil
         # (macOS-only); the JSON converter rejects <data>/<date> fields, so xml1.
-        return contents if contents.start_with?("<?xml") || contents.include?("<plist")
+        return File.read(path) if head.start_with?("<?xml") || head.include?("<plist")
 
         # capture3 hands back the status directly, rather than leaving it in the
         # $? global for the next line to read
@@ -254,8 +272,7 @@ module Booker
           when "WebBookmarkTypeLeaf"
             parse_leaf(folder_title, child)
           when "WebBookmarkTypeList"
-            name = child["Title"].to_s
-            sub_title = folder_title + name.gsub(/[:,'"]/, "-").downcase + "/"
+            sub_title = folder_title + Folder.normalize(child["Title"].to_s) + "/"
             walk(child, sub_title)
           end
         end

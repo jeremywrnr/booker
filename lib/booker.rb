@@ -11,8 +11,4 @@ require_relative "booker/config"
 require_relative "booker/parsers"
 require_relative "booker/bookmarks"
 require_relative "booker/picker"
-require_relative "booker/installer"
 require_relative "booker/cli"
-
-module Booker
-end

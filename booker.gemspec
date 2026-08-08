@@ -43,9 +43,6 @@ Gem::Specification.new do |g|
 
   g.required_ruby_version = ">= 3.2"
 
-  # add_dependency, not add_runtime_dependency: the longer name is soft
-  # deprecated. development dependencies live in the Gemfile - they are not part
-  # of what an installing user agrees to
   g.add_dependency "json", "~> 2.21"
   g.add_dependency "sqlite3", "~> 2.9", ">= 2.9.5"
   g.add_dependency "rexml", "~> 3.4"

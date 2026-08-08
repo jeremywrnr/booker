@@ -2,8 +2,6 @@
 
 # parse booker's command line args and act on them
 
-require "optparse"
-
 require_relative "output"
 
 using Booker::Colors
@@ -56,6 +54,11 @@ module Booker
     end
 
     def option_parser
+      # required here rather than at the top of the file: optparse is only
+      # reachable through an argument starting with "-", so `booker <term>` and
+      # every tab press paid to load it without ever building one
+      require "optparse"
+
       @option_parser ||= OptionParser.new do |opts|
         opts.banner = "Usage: booker [options] [arguments]"
         opts.separator ""
@@ -84,12 +87,12 @@ module Booker
 
       case @mode
       when :bookmark
-        pexit "Error: ".red + "booker --bookmark expects bookmark id", 1 if args.empty?
+        pexit "Error: ".red + "booker --bookmark expects bookmark id" if args.empty?
         open_bookmark(args)
       when :install
         installer.install(args.empty? ? %w[completion config bookmarks] : args)
       when :search
-        pexit "Error: ".red + "--search requires an argument", 1 if args.empty?
+        pexit "Error: ".red + "--search requires an argument" if args.empty?
         open_search(args.join(" "))
       when :list
         # `booker --list github` narrows the table, rather than silently
@@ -101,10 +104,15 @@ module Booker
         Bookmarks.new(args.join(" ")).autocomplete_raw
       end
     rescue OptionParser::InvalidOption => e
-      pexit "Error: ".red + e.message, 1
+      pexit "Error: ".red + e.message
     end
 
     def installer
+      # the installer pulls in find, fileutils and open3 and is reachable only
+      # through --install, so a plain search - and every completion subshell -
+      # loaded all of it to never call any of it
+      require_relative "installer"
+
       @installer ||= Installer.new
     end
 
@@ -135,15 +143,15 @@ module Booker
 
       bm.each do |id|
         url = store.bookmark_url(id)
-        pexit "Failure:".red + " bookmark #{id} not found", 1 if url.nil?
+        pexit "Failure:".red + " bookmark #{id} not found" if url.nil?
         puts "opening bookmark ".grn + url
-        openweb(url)  # No wrap() needed - system() handles it
+        openweb(url)  # no shell quoting needed - system() handles it
       end
     end
 
     def open_search(term)
       puts "searching ".grn + term
-      search = Config.new.searcher
+      search = Config.default.searcher
       term = term.tr(" ", "+")
       openweb(search + term)  # No shell escape needed - it's a URL
     end
@@ -189,30 +197,8 @@ module Booker
       puts "Bookmarks:".grn + " (usage: booker <id> or booker <search>)"
       puts ""
 
-      # Calculate responsive column widths
-      term_width = Term.width
-
-      id_width = 10
-      remaining = term_width - id_width - 3  # 3 spaces between columns
-
-      folder_width = (remaining * 0.20).clamp(15..).to_i
-      title_width = (remaining * 0.30).clamp(20..).to_i
-      url_width = (remaining * 0.50).clamp(30..).to_i
-
-      # Display bookmarks in a readable format
-      allurls.each do |bookmark|
-        id_str = bookmark.id.to_s.window(id_width).grn
-
-        # Clean up folder display
-        folder = bookmark.folder.gsub(/^\|/, "")  # Remove leading |
-        folder = (folder == "/") ? "[root]" : folder.chomp("/")  # Show [root] for top-level
-        folder_str = folder.window(folder_width).blu
-
-        title_str = bookmark.title.window(title_width).yel
-        url_str = bookmark.url.window(url_width)
-
-        puts "#{id_str} #{folder_str} #{title_str} #{url_str}"
-      end
+      widths = column_widths
+      allurls.each { |bookmark| puts row(bookmark, widths) }
 
       puts ""
       puts "Found #{allurls.length} bookmarks".grn
@@ -223,6 +209,26 @@ module Booker
       puts "  #{"booker --help".ljust(20).cyan}  # Show help"
 
       exit 0
+    end
+
+    # what is left of the terminal once the id column and the single spaces
+    # between columns are spoken for, shared out by proportion with a floor
+    # apiece so a narrow window still shows something of every field
+    ID_WIDTH = 10
+    SHARES = {folder: [0.20, 15], title: [0.30, 20], url: [0.50, 30]}.freeze
+
+    def column_widths
+      remaining = Term.width - ID_WIDTH - 3
+      SHARES.transform_values { |share, floor| (remaining * share).clamp(floor..).to_i }
+    end
+
+    def row(bookmark, widths)
+      [
+        bookmark.id.to_s.window(ID_WIDTH).grn,
+        bookmark.display_folder.window(widths[:folder]).blu,
+        bookmark.title.window(widths[:title]).yel,
+        bookmark.url.window(widths[:url])
+      ].join(" ")
     end
   end
 end

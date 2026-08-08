@@ -10,29 +10,19 @@ RSpec.describe Booker::Parsers::Base do
     expect { parser.parse }.to raise_error(NotImplementedError, /must implement parse/)
   end
 
+  # the parser and the installer's label both come off Bookmarks.source_for, so
+  # these check the browser a path is attributed to rather than one of the two
   describe "parser detection" do
-    it "Booker::Parsers::Chrome should be detected for JSON files" do
-      bookmarks = Booker::Bookmarks.new
-      parser_class = bookmarks.send(:detect_parser, fixture_path("bookmarks.json"))
-      expect(parser_class).to eq(Booker::Parsers::Chrome)
-    end
-
-    it "Booker::Parsers::Firefox should be detected for SQLite files" do
-      bookmarks = Booker::Bookmarks.new
-      parser_class = bookmarks.send(:detect_parser, "/path/to/places.sqlite")
-      expect(parser_class).to eq(Booker::Parsers::Firefox)
-    end
-
-    it "Booker::Parsers::Safari should be detected for plist files" do
-      bookmarks = Booker::Bookmarks.new
-      parser_class = bookmarks.send(:detect_parser, "/path/to/Bookmarks.plist")
-      expect(parser_class).to eq(Booker::Parsers::Safari)
-    end
-
-    it "Booker::Parsers::Chrome should default for unknown files" do
-      bookmarks = Booker::Bookmarks.new
-      parser_class = bookmarks.send(:detect_parser, "/path/to/Bookmarks")
-      expect(parser_class).to eq(Booker::Parsers::Chrome)
+    {
+      "bookmarks.json" => [:chrome, Booker::Parsers::Chrome],
+      "/path/to/places.sqlite" => [:firefox, Booker::Parsers::Firefox],
+      "/path/to/Bookmarks.plist" => [:safari, Booker::Parsers::Safari],
+      "/path/to/Bookmarks" => [:chrome, Booker::Parsers::Chrome]
+    }.each do |path, (source, parser)|
+      it "reads #{path} as #{source}" do
+        expect(Booker::Bookmarks.source_for(path)).to eq(source)
+        expect(Booker::Bookmarks::BROWSERS[source][:parser]).to eq(parser)
+      end
     end
   end
 

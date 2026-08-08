@@ -13,29 +13,40 @@ using Booker::Colors
 module Booker
   # Main Bookmarks facade class
   class Bookmarks
-    PARSER_SOURCE = {
-      Parsers::Chrome => "chrome",
-      Parsers::Firefox => "firefox",
-      Parsers::Safari => "safari"
+    # one row per browser: everything booker knows about a bookmark source
+    # lives here, so a fourth browser is an entry rather than a hunt through
+    # the parser lookup, the installer's labels and its colors.
+    #
+    # chrome's bookmarks file has no extension, which is why it is the
+    # fallback rather than a row #source_for can match on
+    BROWSERS = {
+      firefox: {parser: Parsers::Firefox, ext: ".sqlite", label: "[Firefox]", color: :blu},
+      safari: {parser: Parsers::Safari, ext: ".plist", label: "[Safari]", color: :cyan},
+      chrome: {parser: Parsers::Chrome, ext: nil, label: "[Chrome]", color: :yel}
     }.freeze
+
+    # which browser wrote this file, by name. the installer labels sources with
+    # it and the parse loop below picks a parser with it, so the two can never
+    # disagree about what a path is
+    def self.source_for(path)
+      BROWSERS.find { |_, b| b[:ext] && path&.end_with?(b[:ext]) }&.first || :chrome
+    end
 
     attr_reader :allurls
 
     def initialize(search_term = "")
-      @conf = Config.new
-      file_paths = @conf.bookmarks
+      @conf = Config.default
       @allurls = []
       seen = Set.new
 
-      loaded_sources = file_paths.count { |p| p && File.exist?(p) }
-      @multi_source = loaded_sources > 1
+      # stat each configured path once, not once to count them and again to
+      # read them. the index is kept: it is the source half of every id
+      sources = @conf.bookmarks.each_with_index.select { |p, _| p && File.exist?(p) }
+      @multi_source = sources.length > 1
 
-      file_paths.each_with_index do |file_path, source_index|
-        next unless file_path && File.exist?(file_path)
-
-        parser_class = detect_parser(file_path)
-        source = PARSER_SOURCE[parser_class]
-        parser = parser_class.new(file_path, search_term)
+      sources.each do |file_path, source_index|
+        source = self.class.source_for(file_path)
+        parser = BROWSERS.fetch(source)[:parser].new(file_path, search_term)
         parser.parse
 
         parser.results.each do |bookmark|
@@ -91,15 +102,9 @@ module Booker
 
     # "[source] folder | title", with no width applied
     def display_name(url)
-      # Clean up folder display (remove leading |, show [root] for top-level).
-      # "|" and "|/" are both the top level, and both leave nothing behind once
-      # the marker is stripped
-      folder = url.folder.gsub(/^\|/, "").chomp("/")
-      folder = "[root]" if folder.empty?
-
       # Format: [source] folder | title (source only when multi-source)
       prefix = (@multi_source && url.source) ? "[#{url.source}] " : ""
-      name = prefix + folder + " | " + url.title.gsub(/[^a-z0-9\-\/_ ]/i, "")
+      name = prefix + url.display_folder + " | " + url.title.gsub(/[^a-z0-9\-\/_ ]/i, "")
       name.squeeze!("-")
       name.squeeze!(" ")
       # a top level bookmark has no folder text, which would otherwise leave a
@@ -124,34 +129,20 @@ module Booker
     def bookmark_url(id)
       @allurls.find { |url| id == url.id }&.url
     end
-
-    private
-
-    def detect_parser(file_path)
-      if file_path&.end_with?(".sqlite")
-        Parsers::Firefox
-      elsif file_path&.end_with?(".plist")
-        Parsers::Safari
-      else
-        Parsers::Chrome
-      end
-    end
   end
 
   # for recursively parsing bookmarks
   class Folder
-    include Enumerable
-
     attr_reader :json, :title
-    def initialize(json, title = "|")
-      @title = title.gsub(/[:,'"]/, "-").downcase
-      @json = json
-    end
 
-    # needed for Enumerable - has to yield, otherwise every Enumerable method
-    # here sees an empty collection
-    def each(&block)
-      @json.each(&block)
+    # the browsers disagree about what punctuation belongs in a folder name, so
+    # every parser normalizes through here rather than carrying its own copy of
+    # the rule for the levels it builds itself
+    def self.normalize(title) = title.gsub(/[:,'"]/, "-").downcase
+
+    def initialize(json, title = "|")
+      @title = Folder.normalize(title)
+      @json = json
     end
   end
 
@@ -161,6 +152,16 @@ module Booker
   Bookmark = Data.define(:folder, :title, :url, :id, :source) do
     def initialize(folder:, title:, url:, id:, source: nil)
       super(folder:, title: title.gsub(/[:'"+]/, " ").downcase, url:, id:, source:)
+    end
+
+    # the folder as a reader sees it: no leading marker, no trailing slash, and
+    # a name for the top level. "|" and "|/" both mean the top level, and both
+    # leave nothing behind once the marker is stripped - the picker feed and
+    # the --list table share this rather than each deciding what "top" looks
+    # like, which is how the same bookmark ended up rendered two ways
+    def display_folder
+      stripped = folder.gsub(/^\|/, "").chomp("/")
+      stripped.empty? ? "[root]" : stripped
     end
 
     # ruby 3.2's Data#with copies the members straight across without going back

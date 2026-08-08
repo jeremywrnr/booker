@@ -26,7 +26,7 @@ module Booker
   # every caller is reporting a failure, and stdout is a data channel for the
   # completion scripts
   module Output
-    def pexit(msg, sig)
+    def pexit(msg, sig = 1)
       warn msg
       exit sig
     end
@@ -37,6 +37,8 @@ module Booker
   # the whole process is taking a name it does not own. Files that want these
   # say `using Booker::Colors` at the top, and nothing outside booker sees them.
   module Colors
+    CODES = {red: 31, grn: 32, yel: 33, blu: 34, cyan: 36}.freeze
+
     class << self
       # nil means decide per call from the environment; true or false forces it,
       # which is what the specs do since their $stdout is never a terminal
@@ -50,6 +52,15 @@ module Booker
 
         ENV["NO_COLOR"].to_s.empty? && $stdout.tty?
       end
+
+      # color by name, reachable without the refinement. a caller holding the
+      # color as data - the browser table's :yel, say - cannot go through the
+      # refined methods, because refinements are invisible to send
+      def paint(str, name)
+        return str unless enabled?
+
+        "\033[0;#{CODES.fetch(name)};49m#{str}\033[0;0m"
+      end
     end
 
     refine String do
@@ -61,23 +72,15 @@ module Booker
         end
       end
 
-      def colorize(color, mod)
-        return self unless Colors.enabled?
+      def blu = Colors.paint(self, :blu)
 
-        "\033[#{mod};#{color};49m#{self}\033[0;0m"
-      end
+      def cyan = Colors.paint(self, :cyan)
 
-      def reset = colorize(0, 0)
+      def yel = Colors.paint(self, :yel)
 
-      def blu = colorize(34, 0)
+      def grn = Colors.paint(self, :grn)
 
-      def cyan = colorize(36, 0)
-
-      def yel = colorize(33, 0)
-
-      def grn = colorize(32, 0)
-
-      def red = colorize(31, 0)
+      def red = Colors.paint(self, :red)
     end
   end
 end

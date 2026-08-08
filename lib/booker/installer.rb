@@ -3,9 +3,7 @@
 # everything behind `booker --install`: shell completion, the config file,
 # finding browser bookmarks, and the opt-in safari permission walkthrough
 
-require "find"
 require "fileutils"
-require "shellwords"
 require "open3"
 
 require_relative "output"
@@ -18,6 +16,12 @@ module Booker
 
     # shells we ship completion for, and where those scripts live
     SHELLS = %w[zsh bash fish].freeze
+
+    # what ~/.zshrc needs for a script in ~/.zsh/completion to be found
+    ZSHRC_LINES = [
+      "fpath=(~/.zsh/completion $fpath)",
+      "autoload -Uz compinit && compinit"
+    ].freeze
     COMPLETIONS_DIR = File.expand_path("../../completions", __dir__).freeze
 
     # if any of these exist, bash-completion is installed and will autoload our
@@ -29,16 +33,15 @@ module Booker
       "/opt/homebrew/etc/profile.d/bash_completion.sh"
     ].freeze
 
+    # 'all' expands to the full install list (including opt-in safari)
+    ALL = %w[completion config bookmarks safari].freeze
+
     def install(args)
-      target = args.shift
-      exit 0 if target.nil?
+      args.flat_map { |target| /^all$/i.match?(target) ? ALL : target }
+        .each { |target| install_one(target) }
+    end
 
-      # 'all' expands to the full install list (including opt-in safari)
-      if /^all$/i.match?(target)
-        args = %w[completion config bookmarks safari] + args
-        target = args.shift
-      end
-
+    def install_one(target)
       if /comp/i.match?(target) # completion for every shell on this machine
         install_completion
       elsif (shell = SHELLS.find { |s| target.downcase.include?(s) })
@@ -50,10 +53,8 @@ module Booker
       elsif /safari/i.match?(target) # opt-in Safari FDA setup (macOS only)
         install_safari
       else # unknown argument passed into install
-        pexit "Failure: ".red + "unknown installation option (#{target})", 1
+        pexit "Failure: ".red + "unknown installation option (#{target})"
       end
-
-      install(args) # recurse til done
     end
 
     # install completion for every supported shell present on this machine, so a
@@ -84,7 +85,7 @@ module Booker
         out, _err, _status = Open3.capture3("zsh", "-c", "echo $fpath")
         fpath = out.split(" ")
       rescue
-        pexit "Failure: ".red + "zsh is probably not installed, could not find $fpath", 1
+        pexit "Failure: ".red + "zsh is probably not installed, could not find $fpath"
       end
 
       # Try user-writable directories first, then system directories
@@ -107,22 +108,16 @@ module Booker
           # Auto-configure .zshrc if it exists
           zshrc = File.join(user_home, ".zshrc")
           if File.exist?(zshrc)
-            zshrc_content = File.read(zshrc)
-            if zshrc_content.include?(".zsh/completion")
-              puts "~/.zshrc already configured".grn
-            else
-              File.open(zshrc, "a") do |f|
-                f.puts "\n# Booker completion"
-                f.puts "fpath=(~/.zsh/completion $fpath)"
-                f.puts "autoload -Uz compinit && compinit"
-              end
-              puts "Added completion to ~/.zshrc".grn
+            # the marker is the directory, not the whole block: a zshrc that
+            # already puts it on $fpath is configured, however it spelled the
+            # compinit call next to it
+            append_once(zshrc, ZSHRC_LINES, marker: ".zsh/completion", label: "~/.zshrc") do
               puts "Run: ".yel + "source ~/.zshrc".cyan + " to activate"
             end
           else
             puts "Add this to your ~/.zshrc: ".yel + "fpath=(~/.zsh/completion $fpath)".cyan
           end
-        rescue => e
+        rescue
           # Couldn't create user dir, try system dirs as fallback
         end
       end
@@ -135,13 +130,15 @@ module Booker
         next unless File.directory?(fp)
 
         begin
-          completion_file = File.join(fp, "_booker")
-          File.write(completion_file, completion_script("_booker"))
-          system("zsh", "-c", "autoload -U _booker")
+          # nothing is autoloaded here on purpose: `zsh -c 'autoload -U
+          # _booker'` loaded the function into a subshell that exited on the
+          # next line. clear_zsh_compdump below is what actually reaches a new
+          # shell, and the caller is told to unfunction it in this one
+          File.write(File.join(fp, "_booker"), completion_script("_booker"))
           puts "Success: ".grn + "installed zsh autocompletion in #{fp}"
           success = true
           break
-        rescue => e
+        rescue
           # Try next directory silently
         end
       end
@@ -221,30 +218,33 @@ module Booker
     def completion_script(name)
       File.read(File.join(COMPLETIONS_DIR, name))
     rescue Errno::ENOENT
-      pexit "Failure: ".red + "completion script #{name} missing from #{COMPLETIONS_DIR}", 1
+      pexit "Failure: ".red + "completion script #{name} missing from #{COMPLETIONS_DIR}"
     end
 
-    def shell_present?(shell)
-      system("sh", "-c", "command -v #{Shellwords.escape(shell)}", out: File::NULL, err: File::NULL)
-    end
+    # Picker.which, not `sh -c "command -v"`: a fork per shell to answer a PATH
+    # question booker already knows how to answer in process
+    def shell_present?(shell) = !Picker.which(shell).nil?
 
     def bash_completion_present?
       BASH_COMPLETION_MARKERS.any? { |marker| File.exist?(marker) }
     end
 
-    # append a line to an rc file, but only once - install is expected to be
-    # re-runnable without stacking up duplicate lines
-    def append_once(rcfile, line)
-      if File.exist?(rcfile) && File.read(rcfile).include?(line)
-        puts "#{rcfile} already configured".grn
+    # append to an rc file, but only once - install is expected to be
+    # re-runnable without stacking up duplicate lines. `marker` is what counts
+    # as "already there" when that is narrower than everything being written,
+    # and `label` is how the file is named on screen
+    def append_once(rcfile, lines, marker: lines, label: rcfile)
+      if File.exist?(rcfile) && File.read(rcfile).include?(marker)
+        puts "#{label} already configured".grn
         return
       end
 
       File.open(rcfile, "a") do |f|
         f.puts "\n# Booker completion"
-        f.puts line
+        f.puts lines
       end
-      puts "Added completion to #{rcfile}".grn
+      puts "Added completion to #{label}".grn
+      yield if block_given?
     end
 
     def home
@@ -259,72 +259,32 @@ module Booker
       ENV["XDG_CONFIG_HOME"] || File.join(home, ".config")
     end
 
+    # locate bookmarks files, show the user, write the choice to the config.
+    # the search itself is Sources.discover - the same code the auto-detection
+    # fallback uses, so what this offers is exactly what booker would find on
+    # its own rather than a second list that drifts away from it
     def install_bookmarks
-      # locate bookmarks file, show user, write to config?
       puts "searching for browser bookmarks..."
       begin
-        bms = [] # look for bookmarks with type info
-
-        # Search for Chrome bookmarks
-        ["Library/Application Support/Google/Chrome",
-          "AppData/Local/Google/Chrome/User Data/Default",
-          ".config/chromium/Default",
-          ".config/google-chrome/Default",
-          "snap/chromium/common/chromium",
-          "snap/chromium/current/.config/chromium"].each do |f|
-          chrome_home = File.join(ENV["HOME"], f)
-          next if !FileTest.directory?(chrome_home)
-          Find.find(chrome_home) do |file|
-            if /chrom.*bookmarks/i.match?(file)
-              bms << {path: file, type: :chrome}
-            end
-          end
-        end
-
-        # Search for Firefox bookmarks
-        firefox_paths = [
-          ".mozilla/firefox",                                # Linux
-          "snap/firefox/common/.mozilla/firefox",           # Linux (snap)
-          "Library/Application Support/Firefox",            # macOS
-          "AppData/Roaming/Mozilla/Firefox"                 # Windows
-        ]
-
-        firefox_paths.each do |f|
-          firefox_base = File.join(ENV["HOME"], f)
-          next if !FileTest.directory?(firefox_base)
-
-          profiles_ini = File.join(firefox_base, "profiles.ini")
-          next if !File.exist?(profiles_ini)
-
-          # Parse profiles.ini to find Firefox profiles
-          parse_firefox_profiles(profiles_ini, firefox_base).each do |db_path|
-            bms << {path: db_path, type: :firefox}
-          end
-        end
-
-        # Search for Safari bookmarks (macOS only)
-        safari_path = File.join(ENV["HOME"], "Library/Safari/Bookmarks.plist")
-        bms << {path: safari_path, type: :safari} if File.exist?(safari_path)
+        bms = Sources.discover
 
         if bms.empty? # no bookmarks found
           puts "Failure: ".red + "bookmarks file could not be found."
           raise
         elsif bms.length == 1
           # Auto-select if only one source found
-          selected = bms.first[:path]
-          puts "Found bookmark source: #{bookmark_type_label(bms.first[:type])} #{selected}".yel
-          puts "Selected: ".yel + selected
-          Config.new.write(:bookmarks, selected)
-          puts "Success: ".grn + "config file updated with your bookmarks"
+          selected = bms.first
+          puts "Found bookmark source: #{bookmark_type_label(Bookmarks.source_for(selected))} #{selected}".yel
+          save_bookmarks(selected, "config file updated with your bookmarks")
         else # have user select a file
           puts "select bookmarks source: "
 
           # Offer "ALL" as first option if multiple sources found
           puts "0".grn + " - " + "[ALL SOURCES]".cyan + " (search across all browsers)"
-          offset = 1
 
-          bms.each_with_index do |bm, i|
-            puts (i + offset).to_s.grn + " - " + bookmark_type_label(bm[:type], color: true) + " " + bm[:path]
+          bms.each_with_index do |path, i|
+            label = bookmark_type_label(Bookmarks.source_for(path), color: true)
+            puts (i + 1).to_s.grn + " - " + label + " " + path
           end
 
           input = gets
@@ -333,81 +293,46 @@ module Booker
 
           if selection == 0
             # User selected "ALL" - save array of all paths
-            all_paths = bms.map { |bm| bm[:path] }
             puts "Selected: ".yel + "All sources (#{bms.length} bookmark files)"
-            Config.new.write(:bookmarks, all_paths)
+            Config.default.write(:bookmarks, bms)
             puts "Success: ".grn + "config file updated to search all bookmark sources"
           else
-            # User selected single source
-            actual_index = selection - 1
-            selected = bms[actual_index][:path]
-            puts "Selected: ".yel + selected
-            Config.new.write(:bookmarks, selected)
-            puts "Success: ".grn + "config file updated with your bookmarks"
+            save_bookmarks(bms[selection - 1], "config file updated with your bookmarks")
           end
         end
       rescue => e
         puts e.message
-        pexit "Failure: ".red + "could not add bookmarks to config file ~/.booker", 1
+        pexit "Failure: ".red + "could not add bookmarks to config file ~/.booker"
       end
     end
 
+    def save_bookmarks(selected, message)
+      puts "Selected: ".yel + selected
+      Config.default.write(:bookmarks, selected)
+      puts "Success: ".grn + message
+    end
+
+    # the label and its color come off the browser table, so a fourth browser
+    # is a row there rather than two more branches here
     def bookmark_type_label(type, color: false)
-      label = {chrome: "[Chrome]", firefox: "[Firefox]", safari: "[Safari]"}[type] || "[?]"
-      return label unless color
-      case type
-      when :chrome then label.yel
-      when :firefox then label.blu
-      when :safari then label.cyan
-      else label
-      end
-    end
+      browser = Bookmarks::BROWSERS[type]
+      return "[?]" if browser.nil?
 
-    def parse_firefox_profiles(ini_path, firefox_base)
-      profiles = []
-      current_profile = {}
-
-      File.readlines(ini_path).each do |line|
-        line = line.strip
-
-        # New profile section
-        if line.start_with?("[Profile")
-          # Save previous profile if it had a path
-          if current_profile[:path]
-            db_path = File.join(firefox_base, current_profile[:path], "places.sqlite")
-            profiles << db_path if File.exist?(db_path)
-          end
-          current_profile = {}
-
-        # Parse key=value pairs
-        elsif line.include?("=")
-          key, value = line.split("=", 2).map(&:strip)
-          current_profile[:path] = value if key == "Path"
-          current_profile[:name] = value if key == "Name"
-        end
-      end
-
-      # Don't forget the last profile
-      if current_profile[:path]
-        db_path = File.join(firefox_base, current_profile[:path], "places.sqlite")
-        profiles << db_path if File.exist?(db_path)
-      end
-
-      profiles
+      color ? Colors.paint(browser[:label], browser[:color]) : browser[:label]
     end
 
     def install_config
-      Config.new.write
+      Config.default.write
       puts "Success: ".grn + "example config file written to ~/.booker"
     rescue
-      pexit "Failure: ".red + "could not write example config file to ~/.booker", 1
+      pexit "Failure: ".red + "could not write example config file to ~/.booker"
     end
 
     # Opt-in Safari setup: walks through granting Full Disk Access so booker
     # can read ~/Library/Safari/Bookmarks.plist. Not included in the default
     # --install flow because it requires a TCC permission grant.
     def install_safari
-      plist = File.join(ENV["HOME"], "Library/Safari/Bookmarks.plist")
+      plist = File.join(home, "Library/Safari/Bookmarks.plist")
       fda_url = "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
 
       unless RUBY_PLATFORM.include?("darwin")
@@ -438,7 +363,7 @@ module Booker
       $stdout.flush
       choice = $stdin.gets.to_s.strip.upcase
       choice = "A" if choice.empty?
-      pexit "Error: ".red + "invalid choice.", 1 unless %w[A B].include?(choice)
+      pexit "Error: ".red + "invalid choice." unless %w[A B].include?(choice)
 
       puts
       puts "Opening the Full Disk Access pane..."

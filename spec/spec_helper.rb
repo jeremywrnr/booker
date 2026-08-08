@@ -91,7 +91,15 @@ RSpec.configure do |config|
   # which is a terminal - but saying so keeps a future change to that redirect
   # from quietly arming the picker halfway through the suite
   config.before(:each) { Booker::Picker.enabled = false }
-  config.after(:each) { Booker::Picker.enabled = nil }
+
+  # booker memoizes what it only needs to work out once per run - the config,
+  # the resolved picker command, whether firefox is running. a process-lifetime
+  # memo is a suite-lifetime memo, so every example starts from a clean one
+  config.after(:each) do
+    Booker::Picker.reset!
+    Booker::Config.reset!
+    Booker::Parsers::Firefox.reset!
+  end
 
   config.around(:each) do |example|
     original_stdout = $stdout
