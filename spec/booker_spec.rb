@@ -13,6 +13,12 @@ module Browser
 end
 
 describe Booker do
+  def catch_exit
+    yield
+  rescue SystemExit
+    nil
+  end
+
   def run(str)
     Booker.new(str.split)
   end
