@@ -1,7 +1,7 @@
-# Scrape the version instead of loading booker: bundler evaluates this file
-# before the specs start SimpleCov, and anything loaded first goes untracked.
-booker_version = File.read(File.expand_path("lib/booker.rb", __dir__))
-  .slice(/@version\s*=\s*"([^"]+)"/, 1)
+# version.rb holds nothing but the constant, so requiring it here does not drag
+# the library in. that matters: bundler evaluates this file before the specs
+# start SimpleCov, and anything loaded first would go untracked.
+require_relative "lib/booker/version"
 
 Gem::Specification.new do |g|
   g.name = "booker"
@@ -14,16 +14,16 @@ Gem::Specification.new do |g|
     preferred search engine.
   EOF
 
-  g.version = booker_version
+  g.version = Booker::VERSION
   g.platform = Gem::Platform::RUBY
 
   g.author = "Jeremy Warner"
   g.email = "jeremywrnr@gmail.com"
   g.license = "MIT"
   g.executables = ["booker"]
-  # the completion scripts are read at install time, so they have to ship
-  g.files = ["lib/booker.rb", "lib/bookmarks.rb", "lib/config.rb", "lib/consts.rb",
-    "completions/_booker", "completions/booker.bash", "completions/booker.fish"]
+  # globbed rather than listed: the hand written list silently missed the
+  # completion scripts once, and they are read at install time so they must ship
+  g.files = Dir["lib/**/*.rb"] + Dir["completions/*"]
   g.homepage = "http://github.com/jeremywrnr/booker"
 
   g.required_ruby_version = ">= 3.2"

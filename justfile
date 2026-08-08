@@ -2,7 +2,7 @@
 
 # Variables
 gem_name := "booker"
-version := `ruby -r./lib/booker.rb -e 'puts Booker.version'`
+version := `ruby -r./lib/booker/version.rb -e 'puts Booker::VERSION'`
 
 # List all available recipes
 list:

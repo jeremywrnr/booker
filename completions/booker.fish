@@ -17,7 +17,8 @@ function __booker_bookmarks --description 'list booker bookmarks matching the cu
     for arg in $tokens
         test -z "$arg"; and continue
         string match -qr '^-' -- $arg; and continue
-        string match -qr '^[0-9_]+$' -- $arg; and continue
+        # mirrors BOOKMARK_ID in lib/booker/cli.rb: safari ids are uuids
+        string match -qr '^([0-9]+_[a-zA-Z0-9-]+|[0-9_]+)$' -- $arg; and continue
         set -a terms $arg
     end
 
@@ -35,7 +36,7 @@ complete -c booker -s s -l search -d 'explicitly search arguments'
 complete -c booker -s c -l complete -d 'show tab completions'
 complete -c booker -s v -l version -d 'print version'
 complete -c booker -s h -l help -d 'show help'
-# the shell names here mirror SHELLS in lib/booker.rb, which is the source of
+# the shell names here mirror SHELLS in lib/booker/installer.rb, which is the source of
 # truth - add a shell there and it needs adding here too
 complete -c booker -s i -l install -x -d 'install booker support files' \
     -a 'all bookmarks completion config safari zsh bash fish'

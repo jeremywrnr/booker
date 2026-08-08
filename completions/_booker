@@ -11,9 +11,11 @@ _booker_bookmarks() {
     local -a bookmarks sites search_terms
     search_terms=()
 
-    #filter out 'booker', flags, and already-selected bookmark IDs
+    #filter out 'booker', flags, and already-selected bookmark IDs. the id
+    #pattern mirrors BOOKMARK_ID in lib/booker/cli.rb, which is the source of
+    #truth - safari ids are uuids, so digits alone do not cover them
     for arg in "$@"; do
-        if [[ "$arg" != "booker" && "$arg" != -* && ! "$arg" =~ ^[0-9_]+$ ]]; then
+        if [[ "$arg" != "booker" && "$arg" != -* && ! "$arg" =~ ^([0-9]+_[a-zA-Z0-9-]+|[0-9_]+)$ ]]; then
             search_terms+=("$arg")
         fi
     done
@@ -37,8 +39,11 @@ _booker_bookmarks() {
         links+=("$split[2] $BLUE$split[3]$RESET")
     done
 
-    #finally, add completions
+    #finally, add completions. 'list force' keeps the list on screen even when
+    #a single bookmark matches - without it zsh silently inserts a bare id like
+    #2_73D260E7-0A7C-4C32 and nothing says which bookmark that was
     compstate[insert]=menu
+    compstate[list]='list force'
     compadd -U -l -X 'found bookmarks:' -d links -a ids
 }
 

@@ -27,7 +27,8 @@ _booker() {
     for arg in "${COMP_WORDS[@]:1}"; do
         [[ -z "$arg" ]] && continue
         [[ "$arg" == -* ]] && continue
-        [[ "$arg" =~ ^[0-9_]+$ ]] && continue
+        # mirrors BOOKMARK_ID in lib/booker/cli.rb: safari ids are uuids
+        [[ "$arg" =~ ^([0-9]+_[a-zA-Z0-9-]+|[0-9_]+)$ ]] && continue
         search_terms+=("$arg")
     done
 

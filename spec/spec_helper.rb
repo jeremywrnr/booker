@@ -7,7 +7,7 @@ if ENV["COVERAGE"]
     # Coverage is platform dependent: some safari/plutil/open paths only run on
     # a mac, so linux reports a little under what a mac does. The floor has to
     # clear the lower of the two, since CI measures coverage on linux.
-    minimum_coverage line: 70
+    minimum_coverage line: 95
   end
 end
 
@@ -16,6 +16,34 @@ require "rubygems"
 require "rspec"
 require "json"
 require "tmpdir"
+require "stringio"
+
+# dont actually open links while testing, just ignore. keep the real
+# implementation around under another name so the #browse specs can still
+# exercise it - this override is permanent once the suite loads
+module Booker::Browser
+  alias_method :real_browse, :browse
+
+  def browse
+    "/bin/true "
+  end
+end
+
+# fixtures live next to the specs; every spec that needs one goes through here
+# so the paths stay in one place
+def fixture_path(name)
+  File.join(__dir__, "fixtures", name)
+end
+
+# Helper for capturing stdout
+def capture_stdout
+  old_stdout = $stdout
+  $stdout = StringIO.new
+  yield
+  $stdout.string
+ensure
+  $stdout = old_stdout
+end
 
 # Redirect stderr and stdout while testing
 SILENT = true
