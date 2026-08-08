@@ -69,17 +69,16 @@ module Booker
     YAMLCONF = (HOME + "/.booker.yml").freeze
 
     def initialize
-      # config defaults (for osx, default chrome profile)
-      readyaml = read(YAMLCONF)
-      default_bookmarks = detect_default_bookmarks
-      default_config = {
+      # configure w/ yaml config file, if it exists, and only work out the
+      # defaults when there is none. detect_default_bookmarks walks every
+      # chrome profile directory with a recursive glob, which is a lot of
+      # filesystem to touch on the way to answering a question the config file
+      # has already answered - and every Config.new used to pay it
+      @config = read(YAMLCONF) || {
         browser: "open ",
         searcher: "https://google.com/search?q=",
-        bookmarks: default_bookmarks
+        bookmarks: detect_default_bookmarks
       }
-
-      # configure w/ yaml config file, if it exists
-      @config = readyaml || default_config
 
       # prune bad config keys
       @config.each do |k, v|
