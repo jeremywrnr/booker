@@ -3,7 +3,8 @@
 [![Build Status](https://app.travis-ci.com/jeremywrnr/booker.svg)](https://app.travis-ci.com/jeremywrnr/booker)
 [![MIT](https://img.shields.io/npm/l/alt.svg?style=flat)](http://jeremywrnr.com/mit-license)
 
-a CLI bookmark manager for Chrome, Firefox, and Safari, with tab completion.
+a CLI bookmark manager for Chrome, Firefox, and Safari, with tab completion for
+zsh, bash, and fish.
 
 ![Screencast](assets/screencast.gif)
 
@@ -15,9 +16,16 @@ a CLI bookmark manager for Chrome, Firefox, and Safari, with tab completion.
 
 Alternatively, the installation can be done incrementally:
 
-    booker -i comp # adding tab completion (ZSH only)
+    booker -i comp # adding tab completion (every shell found)
     booker -i conf # generate default config (~/.booker.yml)
     booker -i book # locating bookmarks file
+
+`booker -i comp` installs completion for every supported shell it finds on your
+machine. To set up just one:
+
+    booker -i zsh  # ~/.zsh/completion/_booker (or any writable $fpath dir)
+    booker -i bash # ~/.local/share/bash-completion/completions/booker
+    booker -i fish # ~/.config/fish/completions/booker.fish
 
 
 ## :bookmark: `booker` usage
@@ -36,7 +44,7 @@ Alternatively, the installation can be done incrementally:
 
 
 ## about
-This is a tool that allows you to tab complete (in zsh only) Chrome, Firefox,
+This is a tool that allows you to tab complete Chrome, Firefox,
 and Safari bookmarks, and then open them in the browser of your choice. Chrome
 stores bookmarks in a JSON file, Firefox uses a SQLite database, and Safari
 uses a binary plist. Booker can read and parse all three formats, and can even
@@ -64,11 +72,20 @@ which command you want use, by adding the following:
 ## development / testing
 There are some tests in `/spec`. If you clone this repo you can run them with
 `just spec`. There is also a justfile to build and install the gem locally, so
-you can run `just build` to build the gem. To develop the zsh completion script,
-clone this repo, and run:
+you can run `just build` to build the gem.
 
-    booker --install completion && unfunction _booker && autoload -U _booker
+The completion scripts live in `/completions` (`_booker` for zsh, `booker.bash`,
+`booker.fish`) and are read by `booker --install` at install time. They all feed
+off `booker --complete-raw`, which prints one tab separated `id`, `title`, `url`
+per match - unlike `--complete`, that output is never truncated or padded to the
+terminal width, so a script can parse it safely.
 
+zsh and fish complete to the bookmark id and show the title and url as the
+candidate's description. bash has no per-candidate descriptions, so it completes
+to the url itself, which booker opens directly.
 
-## todos
-- tab completion for other shells (bash, fish)
+To reload a script you are editing:
+
+    booker --install zsh && unfunction _booker && autoload -U _booker
+    booker --install bash && source ~/.bashrc
+    booker --install fish && exec fish
