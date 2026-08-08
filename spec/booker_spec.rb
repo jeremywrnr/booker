@@ -1,8 +1,12 @@
 # rspec testing of booker
 require "spec_helper"
 
-# dont actually open links while testing, just ignore
+# dont actually open links while testing, just ignore. keep the real
+# implementation around under another name so the #browse specs below can still
+# exercise it - this override is permanent once the file loads
 module Browser
+  alias_method :real_browse, :browse
+
   def browse
     "/bin/true "
   end
@@ -23,6 +27,16 @@ describe Booker do
     lambda { run(str) }
   end
 
+  # Several flags end in Booker#pexit, and SystemExit is not a StandardError,
+  # so letting one escape an example aborts the whole rspec process - and every
+  # example after it is silently never run. Use this when asserting on output
+  # rather than on the exit code.
+  def run!(str)
+    run(str)
+  rescue SystemExit
+    nil
+  end
+
   it "should exit cleanly when no arguments are given" do
     runblock("").should exit_with_code 0
   end
@@ -34,8 +48,8 @@ describe Booker do
   end
 
   it "should handle unescaped chars in the url" do
-    expect { run("(hi)") }.to output(/searching.*\(hi\)/).to_stdout
-    expect { run("    testing spaces  ") }.to output(/searching.*testing\s+spaces/).to_stdout
+    expect { run!("(hi)") }.to output(/searching.*\(hi\)/).to_stdout
+    expect { run!("    testing spaces  ") }.to output(/searching.*testing\s+spaces/).to_stdout
   end
 
   %w[--bookmark -b --search -s].each do |opt|
@@ -52,13 +66,15 @@ describe Booker do
 
   it "should print the valid version out" do
     %w[--version -v].each do |opt|
-      expect { catch_exit { run(opt) } }.to output(Booker.version).to_stdout
+      expect { run!(opt) }.to output("#{Booker.version}\n").to_stdout
     end
   end
 
+  # "testing 123" is deliberately not here: a numeric argument is a bookmark
+  # id, not a search term, which the "separate bookmark IDs" spec below covers
   it "should search when given string arguments" do
-    ["testing 123", "hi", "mic check mic-check"].each do |str|
-      expect { run(str) }.to output("searching #{str}...\n").to_stdout
+    ["hi", "mic check mic-check"].each do |str|
+      expect { run!(str) }.to output(/searching.*#{Regexp.escape(str)}/m).to_stdout
     end
   end
 
@@ -67,14 +83,14 @@ describe Booker do
     allow_any_instance_of(Bookmarks).to receive(:bookmark_url).with("1").and_return("http://example1.com")
     allow_any_instance_of(Bookmarks).to receive(:bookmark_url).with("2").and_return("http://example2.com")
 
-    expect { run("1 2") }.to output(/opening bookmark.*example1.*opening bookmark.*example2/m).to_stdout
+    expect { run!("1 2") }.to output(/opening bookmark.*example1.*opening bookmark.*example2/m).to_stdout
   end
 
   it "should separate bookmark IDs from search terms" do
     allow_any_instance_of(Bookmarks).to receive(:bookmark_url).with("123").and_return("http://example.com")
 
     # Should open bookmark 123 and search for "github"
-    expect { run("123 github") }.to output(/opening bookmark.*example.*searching github/m).to_stdout
+    expect { run!("123 github") }.to output(/opening bookmark.*example.*searching.*github/m).to_stdout
   end
 
   it "should handle URLs with special shell characters" do
@@ -83,8 +99,8 @@ describe Booker do
     allow_any_instance_of(Bookmarks).to receive(:bookmark_url).with("999").and_return(special_url)
 
     # Should open without shell errors
-    expect { run("999") }.to output(/opening bookmark.*example\.com/m).to_stdout
-    expect { run("999") }.not_to output(/Syntax error|unexpected/m).to_stdout
+    expect { run!("999") }.to output(/opening bookmark.*example\.com/m).to_stdout
+    expect { run!("999") }.not_to output(/Syntax error|unexpected/m).to_stdout
   end
 
   it "should handle URLs with parentheses like Gmail filters" do
@@ -93,8 +109,8 @@ describe Booker do
     allow_any_instance_of(Bookmarks).to receive(:bookmark_url).with("971").and_return(gmail_url)
 
     # Should open without shell errors
-    expect { run("971") }.to output(/opening bookmark.*mail\.google\.com/m).to_stdout
-    expect { run("971") }.not_to output(/Syntax error|unexpected/m).to_stdout
+    expect { run!("971") }.to output(/opening bookmark.*mail\.google\.com/m).to_stdout
+    expect { run!("971") }.not_to output(/Syntax error|unexpected/m).to_stdout
   end
 end
 
@@ -179,11 +195,11 @@ describe Bookmarks do
     end
 
     it "should truncate to appropriate width for completion" do
-      long_name = "a" * (TERMWIDTH + 100)
+      long_name = "a" * (Term.width + 100)
       bookmark = Bookmark.new("folder/", long_name, "http://test.com", "1")
       cleaned = @bm.clean_name(bookmark)
       # clean_name uses half terminal width or 50, whichever is smaller
-      expected_width = [TERMWIDTH / 2, 50].min
+      expected_width = [Term.width / 2, 50].min
       expect(cleaned.length).to eq(expected_width)
     end
 
@@ -230,8 +246,8 @@ describe Bookmarks do
       long_url = "http://example.com/" + ("a" * 500)
       bookmark = Bookmark.new("folder/", "Test", long_url, "1")
       cleaned = @bm.clean_link(bookmark)
-      # Implementation uses [0..TERMWIDTH-CODEWIDTH] which is inclusive, so length can be +1
-      expect(cleaned.length).to be <= (TERMWIDTH - CODEWIDTH + 1)
+      # Implementation uses [0..Term.width-CODEWIDTH] which is inclusive, so length can be +1
+      expect(cleaned.length).to be <= (Term.width - CODEWIDTH + 1)
     end
   end
 
@@ -485,7 +501,9 @@ describe BConfig do
 
   it "should validate config keys" do
     config = BConfig.new
-    config.instance_variable_set(:@config, {bookmarks: "/path", invalid_key: "value"})
+    # initialize rebuilds @config from the yaml file, so setting @config
+    # directly gets overwritten - stub the read instead
+    allow(config).to receive(:read).and_return({bookmarks: "/path", invalid_key: "value"})
 
     expect { config.send(:initialize) }.to raise_error(SystemExit)
   end
@@ -677,14 +695,14 @@ describe "Browser module" do
       allow(OS).to receive(:linux?).and_return(true)
       allow(OS).to receive(:mac?).and_return(false)
       allow(OS).to receive(:windows?).and_return(false)
-      expect(browse).to eq("xdg-open ")
+      expect(real_browse).to eq("xdg-open ")
     end
 
     it "should return open on macOS" do
       allow(OS).to receive(:linux?).and_return(false)
       allow(OS).to receive(:mac?).and_return(true)
       allow(OS).to receive(:windows?).and_return(false)
-      expect(browse).to eq("open ")
+      expect(real_browse).to eq("open ")
     end
   end
 
@@ -703,6 +721,26 @@ describe "Browser module" do
     it "should not match invalid domains" do
       expect("notadomain").not_to match(domain)
       expect("test").not_to match(domain)
+    end
+
+    # bash completion inserts real bookmark urls, so every tld has to open
+    # rather than fall through to the search engine
+    it "should match any tld, not just a fixed list" do
+      expect("web.dev").to match(domain)
+      expect("claude.ai").to match(domain)
+      expect("some.example.sh/path").to match(domain)
+    end
+
+    it "should match urls carrying an explicit scheme" do
+      expect("https://example.dev/a/b?c=d").to match(domain)
+      expect("file:///Users/me/notes.html").to match(domain)
+      expect("http://localhost:3000/app").to match(domain)
+    end
+
+    it "should still treat plain words as search terms" do
+      expect("mic-check").not_to match(domain)
+      expect("(hi)").not_to match(domain)
+      expect("example.com.").not_to match(domain)
     end
   end
 
@@ -762,5 +800,166 @@ describe "Integration tests" do
     expect(bm_title.instance_variable_get(:@allurls)).not_to be_empty
     expect(bm_url.instance_variable_get(:@allurls)).not_to be_empty
     expect(bm_folder.instance_variable_get(:@allurls)).not_to be_empty
+  end
+end
+
+describe "shell completion" do
+  # Booker#initialize immediately parses argv, so build a bare instance to
+  # exercise the install/read helpers on their own
+  let(:booker) { Booker.allocate }
+
+  describe "#completion_script" do
+    it "ships a script for every supported shell" do
+      expect(Booker::SHELLS).to contain_exactly("zsh", "bash", "fish")
+    end
+
+    it "reads the zsh script" do
+      expect(booker.completion_script("_booker")).to include("#compdef booker")
+    end
+
+    it "reads the bash script" do
+      expect(booker.completion_script("booker.bash")).to include("complete -F _booker booker")
+    end
+
+    it "reads the fish script" do
+      expect(booker.completion_script("booker.fish")).to include("complete -c booker")
+    end
+
+    it "has every script call the raw feed rather than --complete" do
+      Booker::SHELLS.zip(["_booker", "booker.bash", "booker.fish"]).each do |_shell, name|
+        expect(booker.completion_script(name)).to include("booker --complete-raw")
+      end
+    end
+
+    it "exits rather than raising when a script is missing" do
+      expect { booker.completion_script("nope.sh") }.to raise_error(SystemExit)
+    end
+  end
+
+  describe "installing into a clean home" do
+    around do |example|
+      Dir.mktmpdir do |tmp|
+        saved = ENV.to_hash.slice("HOME", "XDG_DATA_HOME", "XDG_CONFIG_HOME")
+        ENV["HOME"] = tmp
+        ENV.delete("XDG_DATA_HOME")
+        ENV.delete("XDG_CONFIG_HOME")
+        @home = tmp
+        begin
+          example.run
+        ensure
+          ENV.delete("XDG_DATA_HOME")
+          ENV.delete("XDG_CONFIG_HOME")
+          saved.each { |k, v| ENV[k] = v }
+        end
+      end
+    end
+
+    it "installs fish completion where fish autoloads it" do
+      capture_stdout { booker.install_completion_fish }
+      installed = File.join(@home, ".config/fish/completions/booker.fish")
+      expect(File.exist?(installed)).to be true
+      expect(File.read(installed)).to eq(booker.completion_script("booker.fish"))
+    end
+
+    it "installs bash completion into the XDG dir when bash-completion is present" do
+      allow(booker).to receive(:bash_completion_present?).and_return(true)
+      capture_stdout { booker.install_completion_bash }
+
+      installed = File.join(@home, ".local/share/bash-completion/completions/booker")
+      expect(File.exist?(installed)).to be true
+      # bash-completion does the loading, so ~/.bashrc is left alone
+      expect(File.exist?(File.join(@home, ".bashrc"))).to be false
+    end
+
+    it "falls back to sourcing from bashrc when bash-completion is absent" do
+      allow(booker).to receive(:bash_completion_present?).and_return(false)
+      capture_stdout { booker.install_completion_bash }
+
+      expect(File.exist?(File.join(@home, ".bash_completion.d/booker"))).to be true
+      expect(File.read(File.join(@home, ".bashrc"))).to include(".bash_completion.d/booker")
+    end
+
+    it "does not stack up duplicate bashrc lines when re-run" do
+      allow(booker).to receive(:bash_completion_present?).and_return(false)
+      3.times { capture_stdout { booker.install_completion_bash } }
+
+      bashrc = File.read(File.join(@home, ".bashrc"))
+      expect(bashrc.scan("# Booker completion").length).to eq(1)
+    end
+
+    it "installs zsh completion under a writable fpath dir" do
+      capture_stdout { booker.install_completion_zsh }
+      expect(File.exist?(File.join(@home, ".zsh/completion/_booker"))).to be true
+    end
+
+    it "installs every detected shell at once" do
+      allow(booker).to receive(:shell_present?).and_return(true)
+      allow(booker).to receive(:bash_completion_present?).and_return(false)
+      capture_stdout { booker.install_completion }
+
+      expect(File.exist?(File.join(@home, ".zsh/completion/_booker"))).to be true
+      expect(File.exist?(File.join(@home, ".bash_completion.d/booker"))).to be true
+      expect(File.exist?(File.join(@home, ".config/fish/completions/booker.fish"))).to be true
+    end
+
+    it "skips shells that are not installed instead of failing" do
+      allow(booker).to receive(:shell_present?) { |shell| shell == "fish" }
+      output = capture_stdout { booker.install_completion }
+
+      expect(File.exist?(File.join(@home, ".config/fish/completions/booker.fish"))).to be true
+      expect(output).to match(/Skip.*zsh, bash/)
+    end
+
+    it "warns rather than failing when no supported shell exists" do
+      allow(booker).to receive(:shell_present?).and_return(false)
+      output = capture_stdout { booker.install_completion }
+      expect(output).to match(/no supported shell found/)
+    end
+
+    %w[zsh bash fish].each do |shell|
+      it "routes --install #{shell} to just that shell" do
+        expect(booker).to receive(:"install_completion_#{shell}")
+        expect { booker.install([shell]) }.to raise_error(SystemExit)
+      end
+    end
+  end
+end
+
+describe "#autocomplete_raw" do
+  before do
+    allow_any_instance_of(BConfig).to receive(:bookmarks).and_return(["./spec/bookmarks.json"])
+    @bm = Bookmarks.new
+  end
+
+  it "prints one tab separated id, title and url per bookmark" do
+    output = capture_stdout { @bm.autocomplete_raw }
+    expect(output.lines).not_to be_empty
+
+    output.lines.each do |line|
+      expect(line.chomp.split("\t").length).to eq(3)
+    end
+  end
+
+  it "never truncates the url, unlike #autocomplete" do
+    longest = @bm.instance_variable_get(:@allurls).max_by { |u| u.url.length }
+    raw = capture_stdout { @bm.autocomplete_raw }
+
+    expect(longest.url.length).to be > 50
+    expect(raw).to include(longest.url)
+    expect(capture_stdout { @bm.autocomplete }).not_to include(longest.url)
+  end
+
+  it "does not pad the title out to the terminal width" do
+    output = capture_stdout { @bm.autocomplete_raw }
+
+    output.lines.each do |line|
+      title = line.chomp.split("\t")[1]
+      expect(title).to eq(title.strip)
+    end
+  end
+
+  it "emits an id that bookmark_url can resolve" do
+    id = capture_stdout { @bm.autocomplete_raw }.lines.first.split("\t").first
+    expect(@bm.bookmark_url(id)).to be_a(String)
   end
 end

@@ -1,12 +1,17 @@
 # grab/parse bookmarks from json file on computer
 require "fileutils"
 
-# get int number of columns in half of screen
-def terminal_width
-  guess = `tput cols`.to_i
-  (guess == 0) ? 100 : guess
+# int number of columns on screen. memoized rather than computed at load time
+# because it shells out to tput (~8ms), and the paths that run on every tab
+# press - --complete-raw - never need a width at all
+module Term
+  def self.width
+    @width ||= begin
+      guess = `tput cols`.to_i
+      (guess == 0) ? 100 : guess
+    end
+  end
 end
-TERMWIDTH = terminal_width
 
 # compl. color codes space
 CODEWIDTH = 16
@@ -361,19 +366,39 @@ class Bookmarks
     end
   end
 
+  # machine readable feed for the shell completion scripts - one tab separated
+  # id/title/url triple per line. unlike #autocomplete this is never truncated
+  # or padded, and never depends on the terminal width: `tput cols` is unreliable inside
+  # a completion subshell, and a truncated url would open a broken link.
+  def autocomplete_raw
+    @allurls.each do |url|
+      puts [url.id, display_name(url), url.url.delete("\t\n")].join("\t")
+    end
+  end
+
   # clean title for completion, delete anything not allowed in linktitle
   def clean_name(url)
-    # Clean up folder display (remove leading |, show [root] for top-level)
-    folder = url.folder.gsub(/^\|/, "")
-    folder = (folder == "/") ? "[root]" : folder.chomp("/")
+    # Use half terminal width for name to leave room for URL
+    display_name(url).window([Term.width / 2, 50].min)
+  end
+
+  # "[source] folder | title", with no width applied
+  def display_name(url)
+    # Clean up folder display (remove leading |, show [root] for top-level).
+    # "|" and "|/" are both the top level, and both leave nothing behind once
+    # the marker is stripped
+    folder = url.folder.gsub(/^\|/, "").chomp("/")
+    folder = "[root]" if folder.empty?
 
     # Format: [source] folder | title (source only when multi-source)
     prefix = (@multi_source && url.source) ? "[#{url.source}] " : ""
     name = prefix + folder + " | " + url.title.gsub(/[^a-z0-9\-\/_ ]/i, "")
     name.squeeze!("-")
     name.squeeze!(" ")
-    # Use half terminal width for name to leave room for URL
-    name.window([TERMWIDTH / 2, 50].min)
+    # a top level bookmark has no folder text, which would otherwise leave a
+    # leading space - invisible in the padded #clean_name output, but not in
+    # the raw feed the completion scripts read
+    name.strip
   end
 
   # clean link for completion, remove strange things from any linkurls
@@ -382,15 +407,15 @@ class Bookmarks
     link.gsub!(/.*:\/+/, "")
     link.delete!(" ")
     # Use half terminal width for URL
-    max_width = [TERMWIDTH / 2 - CODEWIDTH, 50].min
+    max_width = [Term.width / 2 - CODEWIDTH, 50].min
     link[0..max_width]
   end
 
-  # get link (from id number)
+  # get link (from id number). #each returned @allurls itself when nothing
+  # matched, so a bad id reached open_bookmark as an Array and blew up with a
+  # TypeError instead of the "bookmark not found" message
   def bookmark_url(id)
-    @allurls.each do |url|
-      return url.url if id == url.id
-    end
+    @allurls.find { |url| id == url.id }&.url
   end
 
   private
@@ -416,9 +441,10 @@ class Folder
     @json = json
   end
 
-  # needed for Enumerable
-  def each
-    @json.each
+  # needed for Enumerable - has to yield, otherwise every Enumerable method
+  # here sees an empty collection
+  def each(&block)
+    @json.each(&block)
   end
 end
 

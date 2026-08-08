@@ -14,6 +14,19 @@ class Booker
   @version = "1.3.0"
   @@version = @version
 
+  # shells we ship completion for, and where those scripts live
+  SHELLS = %w[zsh bash fish]
+  COMPLETIONS_DIR = File.expand_path("../completions", __dir__)
+
+  # if any of these exist, bash-completion is installed and will autoload our
+  # script out of the XDG user directory
+  BASH_COMPLETION_MARKERS = [
+    "/usr/share/bash-completion/bash_completion",
+    "/etc/bash_completion",
+    "/usr/local/etc/profile.d/bash_completion.sh",
+    "/opt/homebrew/etc/profile.d/bash_completion.sh"
+  ]
+
   class << self
     attr_reader :version
   end
@@ -56,6 +69,7 @@ class Booker
       opts.separator ""
       opts.separator "Other options:"
       opts.on("-c", "--complete", "show tab completions") { @mode = :complete }
+      opts.on("--complete-raw", "tab completions, tab separated (for shell scripts)") { @mode = :complete_raw }
       opts.on("-v", "--version", "print version") {
         puts @@version
         exit 0
@@ -81,6 +95,8 @@ class Booker
       open_search(args.join(" "))
     when :complete
       Bookmarks.new(args.join(" ")).autocomplete
+    when :complete_raw
+      Bookmarks.new(args.join(" ")).autocomplete_raw
     end
   rescue OptionParser::InvalidOption => e
     pexit "Error: ".red + e.message, 1
@@ -135,8 +151,7 @@ class Booker
     end
 
     # Calculate responsive column widths
-    term_width = `tput cols`.to_i
-    term_width = 100 if term_width == 0  # fallback
+    term_width = Term.width
 
     id_width = 10
     remaining = term_width - id_width - 3  # 3 spaces between columns
@@ -181,8 +196,10 @@ class Booker
       target = args.shift
     end
 
-    if /comp/i.match?(target) # completion installation
+    if /comp/i.match?(target) # completion for every shell on this machine
       install_completion
+    elsif (shell = SHELLS.find { |s| target.downcase.include?(s) })
+      install_completion_for(shell) # completion for one named shell
     elsif /book/i.match?(target) # bookmarks installation
       install_bookmarks
     elsif /conf/i.match?(target) # default config file generation
@@ -196,7 +213,28 @@ class Booker
     install(args) # recurse til done
   end
 
+  # install completion for every supported shell present on this machine, so a
+  # zsh user who also drops into bash gets both without running install twice
   def install_completion
+    found, missing = SHELLS.partition { |shell| shell_present?(shell) }
+
+    if found.empty?
+      puts "Warning: ".yel + "no supported shell found (#{SHELLS.join(", ")})"
+      return
+    end
+
+    found.each { |shell| install_completion_for(shell) }
+
+    puts "Skip: ".yel + "#{missing.join(", ")} not installed" unless missing.empty?
+  end
+
+  # every shell in SHELLS has an install_completion_<shell>, so adding a fourth
+  # means adding the script, the method, and the SHELLS entry - nothing here
+  def install_completion_for(shell)
+    send("install_completion_#{shell}")
+  end
+
+  def install_completion_zsh
     # check if zsh is even installed for this user
     begin
       fpath = `zsh -c 'echo $fpath'`.split(" ")
@@ -205,7 +243,7 @@ class Booker
     end
 
     # Try user-writable directories first, then system directories
-    user_home = ENV["HOME"]
+    user_home = home
     writable_dirs = fpath.select do |fp|
       fp.start_with?(user_home) && File.directory?(fp) && File.writable?(fp)
     end
@@ -250,7 +288,7 @@ class Booker
 
       begin
         completion_file = File.join(fp, "_booker")
-        File.write(completion_file, COMPLETION)
+        File.write(completion_file, completion_script("_booker"))
         system "zsh -c 'autoload -U _booker'"
         puts "Success: ".grn + "installed zsh autocompletion in #{fp}"
         success = true
@@ -262,8 +300,91 @@ class Booker
 
     unless success
       puts "Warning: ".yel + "Could not install ZSH completion to any directory in $fpath"
-      puts "Try manually: ".grn + "mkdir -p ~/.zsh/completion && booker --install completion"
+      puts "Try manually: ".grn + "mkdir -p ~/.zsh/completion && booker --install zsh"
     end
+  end
+
+  # bash-completion (when installed) autoloads from the XDG user directory.
+  # Without it there is nothing doing the loading, so fall back to a plain
+  # directory plus a source line in ~/.bashrc.
+  def install_completion_bash
+    autoloaded = bash_completion_present?
+    dir = if autoloaded
+      File.join(xdg_data_home, "bash-completion", "completions")
+    else
+      File.join(home, ".bash_completion.d")
+    end
+
+    FileUtils.mkdir_p(dir)
+    File.write(File.join(dir, "booker"), completion_script("booker.bash"))
+    puts "Success: ".grn + "installed bash completion in #{dir}"
+
+    # with bash-completion installed there is nothing left to wire up
+    unless autoloaded
+      append_once(
+        File.join(home, ".bashrc"),
+        "[ -f ~/.bash_completion.d/booker ] && . ~/.bash_completion.d/booker"
+      )
+    end
+
+    puts "Run: ".yel + "source ~/.bashrc".cyan + " to activate"
+  rescue => e
+    puts "Warning: ".yel + "could not install bash completion (#{e.message})"
+  end
+
+  # fish autoloads anything in its completions directory, so there is no rc
+  # file to edit here
+  def install_completion_fish
+    dir = File.join(xdg_config_home, "fish", "completions")
+    FileUtils.mkdir_p(dir)
+    File.write(File.join(dir, "booker.fish"), completion_script("booker.fish"))
+    puts "Success: ".grn + "installed fish completion in #{dir}"
+    puts "Run: ".yel + "exec fish".cyan + " to activate"
+  rescue => e
+    puts "Warning: ".yel + "could not install fish completion (#{e.message})"
+  end
+
+  # read one of the shipped completion scripts (completions/ sits next to lib/,
+  # and is listed in the gemspec so it ships with the gem)
+  def completion_script(name)
+    File.read(File.join(COMPLETIONS_DIR, name))
+  rescue Errno::ENOENT
+    pexit "Failure: ".red + "completion script #{name} missing from #{COMPLETIONS_DIR}", 1
+  end
+
+  def shell_present?(shell)
+    system("sh", "-c", "command -v #{Shellwords.escape(shell)}", out: File::NULL, err: File::NULL)
+  end
+
+  def bash_completion_present?
+    BASH_COMPLETION_MARKERS.any? { |marker| File.exist?(marker) }
+  end
+
+  # append a line to an rc file, but only once - install is expected to be
+  # re-runnable without stacking up duplicate lines
+  def append_once(rcfile, line)
+    if File.exist?(rcfile) && File.read(rcfile).include?(line)
+      puts "#{rcfile} already configured".grn
+      return
+    end
+
+    File.open(rcfile, "a") do |f|
+      f.puts "\n# Booker completion"
+      f.puts line
+    end
+    puts "Added completion to #{rcfile}".grn
+  end
+
+  def home
+    ENV["HOME"] || "/usr/local"
+  end
+
+  def xdg_data_home
+    ENV["XDG_DATA_HOME"] || File.join(home, ".local", "share")
+  end
+
+  def xdg_config_home
+    ENV["XDG_CONFIG_HOME"] || File.join(home, ".config")
   end
 
   def install_bookmarks
