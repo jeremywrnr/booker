@@ -704,6 +704,11 @@ describe "Browser module" do
       allow(OS).to receive(:windows?).and_return(false)
       expect(real_browse).to eq("open ")
     end
+
+    it "should return the chrome executable on windows" do
+      allow(OS).to receive(:windows?).and_return(true)
+      expect(real_browse).to include("chrome.exe")
+    end
   end
 
   describe "#domain" do
@@ -961,5 +966,399 @@ describe "#autocomplete_raw" do
   it "emits an id that bookmark_url can resolve" do
     id = capture_stdout { @bm.autocomplete_raw }.lines.first.split("\t").first
     expect(@bm.bookmark_url(id)).to be_a(String)
+  end
+end
+
+# The install and config paths below were most of booker's uncovered code: they
+# shell out, write into $HOME, and prompt on stdin. Each one here runs against a
+# throwaway HOME with the interactive and platform bits stubbed, so the same
+# lines get exercised on linux (where CI measures coverage) as on a mac.
+
+describe OS do
+  it "identifies exactly one platform for the host it runs on" do
+    expect([OS.windows?, OS.mac?, OS.linux?].count(true)).to eq(1)
+  end
+end
+
+describe "BConfig file handling" do
+  # allocate skips initialize, which would read the developer's real ~/.booker.yml
+  let(:config) { BConfig.allocate }
+
+  it "falls back to defaults when the config file is missing" do
+    expect(config.read("/nonexistent/.booker.yml")).to be false
+  end
+
+  it "falls back to defaults when the config file is not valid yaml" do
+    Dir.mktmpdir do |tmp|
+      bad = File.join(tmp, "bad.yml")
+      File.write(bad, "searcher: [unclosed\n")
+      expect(config.read(bad)).to be false
+    end
+  end
+
+  it "writes updated keys back out as yaml" do
+    Dir.mktmpdir do |tmp|
+      target = File.join(tmp, ".booker.yml")
+      stub_const("BConfig::YAMLCONF", target)
+
+      BConfig.new.write(:searcher, "https://example.com/?q=")
+
+      expect(YAML.load_file(target)[:searcher]).to eq("https://example.com/?q=")
+    end
+  end
+
+  it "discovers chrome bookmarks sitting under a profile directory" do
+    Dir.mktmpdir do |tmp|
+      stub_const("BConfig::HOME", tmp)
+      profile = File.join(tmp, ".config/chromium/Default")
+      FileUtils.mkdir_p(profile)
+      File.write(File.join(profile, "Bookmarks"), "{}")
+
+      sources = BConfig.allocate.discover_all_bookmark_sources
+      expect(sources).to include(File.join(profile, "Bookmarks"))
+    end
+  end
+end
+
+describe "#parse_firefox_profiles" do
+  let(:booker) { Booker.allocate }
+
+  around do |example|
+    Dir.mktmpdir do |tmp|
+      @base = tmp
+      example.run
+    end
+  end
+
+  def write_ini(body)
+    path = File.join(@base, "profiles.ini")
+    File.write(path, body)
+    path
+  end
+
+  def add_profile(name)
+    FileUtils.mkdir_p(File.join(@base, name))
+    FileUtils.touch(File.join(@base, name, "places.sqlite"))
+    File.join(@base, name, "places.sqlite")
+  end
+
+  it "returns the database of every profile that has one" do
+    first = add_profile("one.default")
+    second = add_profile("two.dev")
+    ini = write_ini(<<~INI)
+      [Profile0]
+      Name=default
+      Path=one.default
+
+      [Profile1]
+      Name=dev
+      Path=two.dev
+    INI
+
+    expect(booker.parse_firefox_profiles(ini, @base)).to contain_exactly(first, second)
+  end
+
+  it "skips profiles whose database has not been created yet" do
+    real = add_profile("real.default")
+    ini = write_ini(<<~INI)
+      [Profile0]
+      Path=real.default
+
+      [Profile1]
+      Path=ghost.default
+    INI
+
+    expect(booker.parse_firefox_profiles(ini, @base)).to eq([real])
+  end
+
+  it "returns nothing when no profile declares a path" do
+    ini = write_ini("[General]\nStartWithLastProfile=1\n")
+    expect(booker.parse_firefox_profiles(ini, @base)).to be_empty
+  end
+end
+
+describe "#bookmark_type_label" do
+  let(:booker) { Booker.allocate }
+
+  it "labels each known browser" do
+    expect(booker.bookmark_type_label(:chrome)).to eq("[Chrome]")
+    expect(booker.bookmark_type_label(:firefox)).to eq("[Firefox]")
+    expect(booker.bookmark_type_label(:safari)).to eq("[Safari]")
+  end
+
+  it "falls back to a placeholder for anything unrecognized" do
+    expect(booker.bookmark_type_label(:opera)).to eq("[?]")
+  end
+
+  it "colors the label only when asked to" do
+    %i[chrome firefox safari opera].each do |type|
+      plain = booker.bookmark_type_label(type)
+      expect(booker.bookmark_type_label(type, color: true)).to include(plain)
+    end
+
+    expect(booker.bookmark_type_label(:chrome, color: true)).not_to eq("[Chrome]")
+  end
+end
+
+describe "#install_bookmarks" do
+  let(:booker) { Booker.allocate }
+
+  around do |example|
+    Dir.mktmpdir do |tmp|
+      saved = ENV["HOME"]
+      ENV["HOME"] = tmp
+      @home = tmp
+      begin
+        example.run
+      ensure
+        ENV["HOME"] = saved
+      end
+    end
+  end
+
+  before do
+    # record config writes rather than letting them reach a real ~/.booker.yml
+    @written = []
+    allow_any_instance_of(BConfig).to receive(:write) { |_instance, k, v| @written << [k, v] }
+  end
+
+  def add_chrome
+    dir = File.join(@home, ".config/google-chrome/Default")
+    FileUtils.mkdir_p(dir)
+    File.write(File.join(dir, "Bookmarks"), "{}")
+    File.join(dir, "Bookmarks")
+  end
+
+  def add_firefox
+    base = File.join(@home, ".mozilla/firefox")
+    FileUtils.mkdir_p(File.join(base, "abc.default"))
+    FileUtils.touch(File.join(base, "abc.default", "places.sqlite"))
+    File.write(File.join(base, "profiles.ini"), "[Profile0]\nPath=abc.default\n")
+    File.join(base, "abc.default", "places.sqlite")
+  end
+
+  it "exits when no browser bookmarks can be found" do
+    expect { capture_stdout { booker.install_bookmarks } }.to raise_error(SystemExit)
+  end
+
+  it "auto selects the only source it finds" do
+    chrome = add_chrome
+    output = capture_stdout { booker.install_bookmarks }
+
+    expect(@written).to eq([[:bookmarks, chrome]])
+    expect(output).to include("[Chrome]")
+  end
+
+  it "offers every source when more than one exists" do
+    add_chrome
+    add_firefox
+    allow(booker).to receive(:gets).and_return("0\n")
+
+    output = capture_stdout { booker.install_bookmarks }
+
+    expect(output).to include("ALL SOURCES")
+    expect(output).to include("[Firefox]")
+  end
+
+  it "saves all sources when 0 is picked" do
+    chrome = add_chrome
+    firefox = add_firefox
+    allow(booker).to receive(:gets).and_return("0\n")
+
+    capture_stdout { booker.install_bookmarks }
+
+    key, paths = @written.first
+    expect(key).to eq(:bookmarks)
+    expect(paths).to contain_exactly(chrome, firefox)
+  end
+
+  it "saves just the numbered source when one is picked" do
+    chrome = add_chrome
+    add_firefox
+    allow(booker).to receive(:gets).and_return("1\n")
+
+    capture_stdout { booker.install_bookmarks }
+
+    expect(@written).to eq([[:bookmarks, chrome]])
+  end
+
+  it "exits when the prompt gets no answer" do
+    add_chrome
+    add_firefox
+    allow(booker).to receive(:gets).and_return(nil)
+
+    expect { capture_stdout { booker.install_bookmarks } }.to raise_error(SystemExit)
+  end
+end
+
+describe "#install_config" do
+  let(:booker) { Booker.allocate }
+
+  it "reports where the example config landed" do
+    allow_any_instance_of(BConfig).to receive(:write)
+    output = capture_stdout { booker.install_config }
+    expect(output).to include("example config file written")
+  end
+
+  it "exits when the config file cannot be written" do
+    allow_any_instance_of(BConfig).to receive(:write).and_raise(Errno::EACCES)
+    expect { capture_stdout { booker.install_config } }.to raise_error(SystemExit)
+  end
+end
+
+describe "#install routing" do
+  let(:booker) { Booker.allocate }
+
+  before do
+    %i[install_completion install_bookmarks install_config install_safari].each do |installer|
+      allow(booker).to receive(installer)
+    end
+  end
+
+  it "expands all into every installer, safari included" do
+    %i[install_completion install_config install_bookmarks install_safari].each do |installer|
+      expect(booker).to receive(installer)
+    end
+
+    expect { booker.install(["all"]) }.to raise_error(SystemExit)
+  end
+
+  {
+    "completion" => :install_completion,
+    "bookmarks" => :install_bookmarks,
+    "config" => :install_config,
+    "safari" => :install_safari
+  }.each do |target, installer|
+    it "routes #{target} to #{installer}" do
+      expect(booker).to receive(installer)
+      expect { booker.install([target]) }.to raise_error(SystemExit)
+    end
+  end
+
+  it "exits on an install target it does not recognize" do
+    expect { capture_stdout { booker.install(["banana"]) } }.to raise_error(SystemExit)
+  end
+end
+
+describe "#install_safari" do
+  let(:booker) { Booker.allocate }
+  let(:plist) { File.join(ENV["HOME"], "Library/Safari/Bookmarks.plist") }
+
+  before do
+    # pretend to be a mac holding a bookmarks file, and never really shell out
+    stub_const("RUBY_PLATFORM", "x86_64-darwin25")
+    allow(File).to receive(:exist?).and_call_original
+    allow(File).to receive(:exist?).with(plist).and_return(true)
+    allow(booker).to receive(:system).and_return(true)
+    allow(booker).to receive(:safari_readable?).and_return(false)
+  end
+
+  it "skips the whole flow when not on a mac" do
+    stub_const("RUBY_PLATFORM", "x86_64-linux")
+    expect(capture_stdout { booker.install_safari }).to include("macOS-only")
+  end
+
+  it "asks the user to launch safari when there is no bookmarks file" do
+    allow(File).to receive(:exist?).with(plist).and_return(false)
+    expect(capture_stdout { booker.install_safari }).to include("Safari bookmarks not found")
+  end
+
+  it "stops early when the file is already readable" do
+    allow(booker).to receive(:safari_readable?).and_return(true)
+    expect(capture_stdout { booker.install_safari }).to include("already readable")
+  end
+
+  it "opens the full disk access pane" do
+    allow($stdin).to receive(:gets).and_return("A\n")
+    expect(booker).to receive(:system).with("open", /Privacy_AllFiles/)
+
+    capture_stdout { booker.install_safari }
+  end
+
+  it "walks through granting access to the terminal" do
+    allow($stdin).to receive(:gets).and_return("A\n")
+    expect(capture_stdout { booker.install_safari }).to include("add your terminal app")
+  end
+
+  it "treats an empty answer as the terminal option" do
+    allow($stdin).to receive(:gets).and_return("\n")
+    expect(capture_stdout { booker.install_safari }).to include("add your terminal app")
+  end
+
+  it "confirms success after the narrower plutil grant" do
+    allow(booker).to receive(:safari_readable?).and_return(false, true)
+    allow($stdin).to receive(:gets).and_return("B\n", "\n")
+
+    output = capture_stdout { booker.install_safari }
+
+    expect(output).to include("/usr/bin/plutil")
+    expect(output).to include("now readable")
+  end
+
+  it "reports a failure when plutil still cannot read the file" do
+    allow($stdin).to receive(:gets).and_return("B\n", "\n")
+    expect(capture_stdout { booker.install_safari }).to include("still can't read")
+  end
+
+  it "exits on a choice that is neither A nor B" do
+    allow($stdin).to receive(:gets).and_return("Q\n")
+    expect { capture_stdout { booker.install_safari } }.to raise_error(SystemExit)
+  end
+end
+
+describe "environment probes" do
+  let(:booker) { Booker.allocate }
+
+  it "detects a shell that exists, and one that does not" do
+    expect(booker.shell_present?("sh")).to be true
+    expect(booker.shell_present?("definitely-not-a-real-shell")).to be false
+  end
+
+  it "answers whether bash-completion is installed either way" do
+    expect([true, false]).to include(booker.bash_completion_present?)
+  end
+
+  it "reports safari bookmarks as unreadable when the file is not there" do
+    expect(booker.safari_readable?("/nonexistent/Bookmarks.plist")).to be_falsey
+  end
+end
+
+describe "argument dispatch" do
+  let(:booker) { Booker.allocate }
+
+  before do
+    allow_any_instance_of(BConfig).to receive(:bookmarks).and_return(["./spec/bookmarks.json"])
+  end
+
+  it "opens an argument that looks like a website" do
+    expect(capture_stdout { Booker.new(["example.com"]) }).to include("opening website")
+  end
+
+  it "explains how to install when there are no bookmarks at all" do
+    allow_any_instance_of(BConfig).to receive(:bookmarks).and_return([])
+
+    output = capture_stdout do
+      expect { Booker.new([]) }.to raise_error(SystemExit)
+    end
+
+    expect(output).to include("No bookmarks found")
+  end
+
+  it "routes --install with no argument to the default installers" do
+    expect(booker).to receive(:install).with(%w[completion config bookmarks])
+    booker.dispatch_option(["-i"])
+  end
+
+  it "routes --bookmark to opening that bookmark" do
+    expect(booker).to receive(:open_bookmark).with(["1"])
+    booker.dispatch_option(["-b", "1"])
+  end
+
+  it "routes --search to a search" do
+    expect(capture_stdout { booker.dispatch_option(["-s", "hello"]) }).to include("searching")
+  end
+
+  it "routes --complete-raw to the tab separated feed" do
+    expect(capture_stdout { booker.dispatch_option(["--complete-raw"]) }).to include("\t")
   end
 end

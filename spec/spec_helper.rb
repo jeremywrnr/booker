@@ -4,8 +4,9 @@ if ENV["COVERAGE"]
   require "simplecov"
   SimpleCov.start do
     add_filter "/spec/"
-    # floor sits just under the current 72%, to catch regressions without
-    # tripping on ordinary refactors -- raise it as coverage improves
+    # Coverage is platform dependent: some safari/plutil/open paths only run on
+    # a mac, so linux reports a little under what a mac does. The floor has to
+    # clear the lower of the two, since CI measures coverage on linux.
     minimum_coverage line: 70
   end
 end
