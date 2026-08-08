@@ -3,12 +3,6 @@
 # specs for Booker::CLI: turning argv into an action
 
 RSpec.describe Booker::CLI do
-  def catch_exit
-    yield
-  rescue SystemExit
-    nil
-  end
-
   def run(str)
     Booker::CLI.new(str.split)
   end
@@ -17,14 +11,10 @@ RSpec.describe Booker::CLI do
     lambda { run(str) }
   end
 
-  # Several flags end in Booker#pexit, and SystemExit is not a StandardError,
-  # so letting one escape an example aborts the whole rspec process - and every
-  # example after it is silently never run. Use this when asserting on output
-  # rather than on the exit code.
+  # Several flags end in Booker#pexit. Use this when asserting on output
+  # rather than on the exit code; catch_exit lives in spec_helper.
   def run!(str)
-    run(str)
-  rescue SystemExit
-    nil
+    catch_exit { run(str) }
   end
 
   it "should exit cleanly when no arguments are given" do
@@ -185,6 +175,34 @@ RSpec.describe "argument dispatch" do
   it "routes --complete-raw to the tab separated feed" do
     expect(capture_stdout { booker.dispatch_option(["--complete-raw"]) }).to include("\t")
   end
+
+  # a browser that will not start is the one failure booker cannot do anything
+  # about, so it says so rather than reporting the url as opened. both halves
+  # are here on purpose: the suite's stub browser succeeds everywhere, and a
+  # branch covered only by whichever os happens to lack the stubbed binary is
+  # not covered at all
+  describe "#openweb when the browser will not start" do
+    # #openweb execs the browser directly rather than through a shell, so this
+    # has to be one binary and not a command line. `false` exits 1 and ignores
+    # the url, and PATH has it on both platforms
+    it "reports the exit code when the browser ran and refused" do
+      allow(booker).to receive(:browse).and_return("false ")
+
+      expect(capture_stdout { booker.openweb("https://example.com") })
+        .to match(/Failed to open URL \(exit code: 1\)/)
+    end
+
+    # system reports a missing binary as nil rather than false, which is the
+    # other way into the same warning. the code itself is left unasserted -
+    # it comes from the forked child rather than from booker, and pinning it
+    # would be pinning a libc convention across four rubies and two platforms
+    it "still reports when the browser command does not exist at all" do
+      allow(booker).to receive(:browse).and_return("booker-no-such-browser ")
+
+      expect(capture_stdout { booker.openweb("https://example.com") })
+        .to match(/Failed to open URL \(exit code: \d+\)/)
+    end
+  end
 end
 
 RSpec.describe "bookmark ids handed over by tab completion" do
@@ -260,14 +278,6 @@ RSpec.describe "the interactive picker" do
     allow_any_instance_of(Booker::Config).to receive(:bookmarks)
       .and_return([fixture_path("bookmarks.json")])
     Booker::Picker.enabled = true
-  end
-
-  # every path here ends in exit, and SystemExit is not a StandardError - one
-  # escaping an example would abort rspec itself
-  def catch_exit
-    yield
-  rescue SystemExit
-    nil
   end
 
   def first_id = Booker::Bookmarks.new("").allurls.first.id

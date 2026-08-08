@@ -34,13 +34,19 @@ module Booker
       end
     end
 
+    # what an explicit scheme looks like. #domain and #prep are two halves of
+    # one grammar - the first decides an argument is a url, the second decides
+    # it already says how to fetch it - so they read the rule from here rather
+    # than spelling it out twice and drifting apart
+    SCHEME = /[a-z][a-z0-9+.-]*:\/\//i
+
     # does this argument look like a website rather than a search term? matches
     # anything carrying an explicit scheme, or a bare host with a dot and an
     # alphabetic tld. tab completion inserts real bookmark urls, so every tld has
     # to work here - not just the handful (io|com|net|org|...) we used to list,
     # which sent bookmarks on .dev or .ai off to the search engine instead.
     def domain
-      %r{\A(?:[a-z][a-z0-9+.-]*://\S+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d+)?(?:[/?#]\S*)?)\z}i
+      %r{\A(?:#{SCHEME}\S+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d+)?(?:[/?#]\S*)?)\z}i
     end
 
     # helper methods
@@ -48,11 +54,7 @@ module Booker
     # alone sent everything else through the same branch, so a completed
     # chrome://bookmarks/ or file:///... came out as http://chrome://bookmarks/
     def prep(url)
-      if %r{\A[a-z][a-z0-9+.-]*://}i.match?(url)
-        url
-      else
-        "http://" + url
-      end
+      /\A#{SCHEME}/i.match?(url) ? url : "http://" + url
     end
 
     def wrap(url)

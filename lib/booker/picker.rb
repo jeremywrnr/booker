@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # an external fuzzy finder (fzf by default) as booker's selection ui. booker
-# feeds it candidate lines on stdin and reads the chosen ones back on stdout;
+# feeds it candidate lines on stdin and reads the chosen one back on stdout;
 # the finder opens /dev/tty itself for the interface, so the pipes on either
 # side carry nothing but data.
 #
@@ -12,7 +12,7 @@
 require "shellwords"
 
 module Booker
-  class Picker
+  module Picker
     # --delimiter/--with-nth hide the id column: booker needs it back, but it is
     # noise on screen, and hiding it also takes it out of the match, so typing
     # "2_" does not pull up every bookmark from the second source. --no-sort
@@ -37,17 +37,16 @@ module Booker
     ].freeze
 
     class << self
-      # nil means decide from the environment; true or false forces it, which is
-      # what the specs do - their stdin and stdout are never terminals, so the
-      # picker would stay off anyway, but saying so keeps that from being an
-      # accident of how the suite redirects output
+      # nil means decide from the environment; true or false forces it. the
+      # specs set this, and so does --list - same shape as Colors.enabled=
       attr_writer :enabled
 
       def enabled?
         return @enabled unless @enabled.nil?
 
         # tty? first: it is a pair of syscalls, where #command reads and parses
-        # ~/.booker.yml. a completion subshell asks this on every keystroke
+        # ~/.booker.yml, and a run that is not interactive never needs to know
+        # whether a finder is installed
         tty? && !command.nil?
       end
 
@@ -56,28 +55,18 @@ module Booker
       def tty? = $stdin.tty? && $stdout.tty?
 
       # the configured picker, or fzf when it is on PATH. nil when neither is
-      # installed, which is the signal to stay on booker's pre-picker behavior.
-      # memoized because #enabled? and #select both ask
+      # installed, which is the signal to stay on booker's pre-picker behavior
       def command
-        return @command if defined?(@command)
-
         configured = Config.new.picker
 
         # yaml reads a bare `:picker: false` as the boolean, and anyone writing
         # that means "leave the picker off" - without this it would look like
-        # nothing was configured at all and quietly start fzf instead
-        return @command = nil if configured == false
+        # nothing was configured at all and quietly start fzf instead. a blank
+        # setting is the same request, and would leave nothing to look up
+        return nil if configured == false
 
-        # an empty or blank setting is the same request, and would otherwise
-        # leave nothing for #which to look up
         argv = configured ? Shellwords.split(configured.to_s) : DEFAULT
-        @command = (!argv.empty? && which(argv.first)) ? argv : nil
-      end
-
-      # specs stub #command and set #enabled, and both memoize across examples
-      def reset!
-        remove_instance_variable(:@command) if defined?(@command)
-        @enabled = nil
+        (!argv.empty? && which(argv.first)) ? argv : nil
       end
 
       # no subshell to `which`: this runs before every interactive invocation,
@@ -86,57 +75,56 @@ module Booker
       def which(bin)
         return executable?(bin) ? bin : nil if bin.include?(File::SEPARATOR)
 
-        ENV.fetch("PATH", "").split(File::PATH_SEPARATOR)
+        # lazy: the answer is usually in the first few entries, and eagerly
+        # joining all forty PATH directories to throw them away is the one
+        # thing a hand written which is here to avoid
+        ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).lazy
           .map { |dir| File.join(dir, bin) }
           .find { |path| executable?(path) }
       end
 
       def executable?(path) = File.executable?(path) && !File.directory?(path)
-    end
 
-    # hand the finder its candidates and get back the ids of what was picked.
-    #
-    #   [ids] - the user chose these
-    #   []    - the user cancelled, or nothing matched
-    #   nil   - there is no usable finder, so fall back to the old behavior
-    def select(lines)
-      argv = self.class.command
-      return nil if argv.nil?
+      # hand the finder its candidates and get back the id of what was picked,
+      # or nil for every other outcome - cancelled, nothing matched, or no
+      # usable finder. one id and not a list: picking a bookmark is a
+      # one-at-a-time thing, and dropping --multi above only covers the default
+      # finder, not one named in ~/.booker.yml
+      def select(lines)
+        argv = command
+        return nil if argv.nil?
 
-      io = IO.popen(argv, "r+")
-      feed(io, lines)
-      chosen = io.read
-      io.close
+        io = IO.popen(argv, "r+")
+        feed(io, lines)
+        chosen = io.read
+        io.close
 
-      # fzf: 0 selected, 1 no match, 2 error, 130 interrupted. a selection that
-      # came back empty counts as a cancel too - that pairs with the finder
-      # exiting 0 the moment it is closed, before it has read anything
-      return [] unless Process.last_status&.exitstatus&.zero?
+        # fzf: 0 selected, 1 no match, 2 error, 130 interrupted. a selection
+        # that came back empty counts as a cancel too - that pairs with the
+        # finder exiting 0 the moment it is closed, before it has read anything
+        return nil unless Process.last_status&.exitstatus&.zero?
 
-      # at most one, whatever came back. dropping --multi above stops fzf
-      # offering multi select in the first place, but a picker named in
-      # ~/.booker.yml can still be configured for it, and one return press
-      # turning into six browser tabs is never what was meant
-      chosen.lines.filter_map { |line|
-        id = line.split("\t", 2).first.strip
+        id = chosen.lines.first.to_s.split("\t", 2).first.to_s.strip
         id unless id.empty?
-      }.first(1)
-    rescue Errno::ENOENT
-      # the binary went away between the PATH check and the spawn
-      nil
-    rescue Interrupt
-      []
-    end
+      rescue Errno::ENOENT, Interrupt
+        # the binary went away between the PATH check and the spawn, or the
+        # user interrupted booker itself rather than the finder
+        nil
+      end
 
-    private
+      private
 
-    def feed(io, lines)
-      lines.each { |line| io.puts(line) }
-      io.close_write
-    rescue Errno::EPIPE
-      # expected, not exceptional: the finder exits the instant escape is
-      # pressed, and with a few hundred bookmarks booker is usually still
-      # writing. the exit status below is what says what happened
+      # one write, not one per bookmark. IO.popen hands back a synced IO, so
+      # `puts` per line is an unbuffered syscall each - measured 10x slower
+      # than a single write at a few thousand bookmarks
+      def feed(io, lines)
+        io.write(lines.join("\n") + "\n") unless lines.empty?
+        io.close_write
+      rescue Errno::EPIPE
+        # expected, not exceptional: the finder exits the instant escape is
+        # pressed, and with a few hundred bookmarks booker is usually still
+        # writing. the exit status above is what says what happened
+      end
     end
   end
 end

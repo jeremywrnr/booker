@@ -26,11 +26,17 @@ require "stringio"
 # dont actually open links while testing, just ignore. keep the real
 # implementation around under another name so the #browse specs can still
 # exercise it - this override is permanent once the suite loads
+#
+# resolved through PATH rather than named absolutely: macOS keeps true in
+# /usr/bin and has no /bin/true at all, so an absolute path here stands for a
+# browser that opened the url on one platform and a browser that could not be
+# found on the other. that difference is invisible - #openweb only warns - and
+# it silently moved the coverage of its failure branch from one os to the other
 module Booker::Browser
   alias_method :real_browse, :browse
 
   def browse
-    "/bin/true "
+    "true "
   end
 end
 
@@ -48,6 +54,16 @@ def capture_stdout
   $stdout.string
 ensure
   $stdout = old_stdout
+end
+
+# run a block that is expected to exit. SystemExit is not a StandardError, so
+# one escaping an example aborts rspec itself and every example after it is
+# silently never run. use this when asserting on output; use the exit_with_code
+# matcher below when the status is what matters
+def catch_exit
+  yield
+rescue SystemExit
+  nil
 end
 
 # diagnostics go to stderr, so that a warning raised while parsing can never
@@ -73,10 +89,9 @@ RSpec.configure do |config|
   # the suite is already safe by construction - the redirect below hands $stdout
   # a File on /dev/null, and capture_stdout hands it a StringIO, neither of
   # which is a terminal - but saying so keeps a future change to that redirect
-  # from quietly arming the picker halfway through the suite. #reset! also drops
-  # the memoized picker command, which would otherwise leak between examples
+  # from quietly arming the picker halfway through the suite
   config.before(:each) { Booker::Picker.enabled = false }
-  config.after(:each) { Booker::Picker.reset! }
+  config.after(:each) { Booker::Picker.enabled = nil }
 
   config.around(:each) do |example|
     original_stdout = $stdout

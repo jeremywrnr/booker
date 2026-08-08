@@ -92,7 +92,9 @@ module Booker
         pexit "Error: ".red + "--search requires an argument", 1 if args.empty?
         open_search(args.join(" "))
       when :list
-        show_bookmarks(force_table: true)
+        # `booker --list github` narrows the table, rather than silently
+        # dropping the term and printing everything
+        show_bookmarks(args.join(" "), force_table: true)
       when :complete
         Bookmarks.new(args.join(" ")).autocomplete
       when :complete_raw
@@ -115,21 +117,28 @@ module Booker
       success = system(browser_cmd, url, out: File::NULL, err: File::NULL)
 
       unless success
-        # nil when the browser command was not found at all, in which case
-        # there is no exit status to report
+        # system reports a missing binary as nil rather than false, but the
+        # forked child still exited - with 127, the shell convention execvp
+        # failures use - so there is a status either way. the &. is only for the
+        # case where nothing in this process has spawned a child yet
         code = Process.last_status&.exitstatus
         puts "Warning: ".yel + "Failed to open URL (exit code: #{code})"
       end
     end
 
-    # an array of ints, as bookmark ids
-    def open_bookmark(bm)
-      id = bm.shift
-      url = Bookmarks.new.bookmark_url(id)
-      pexit "Failure:".red + " bookmark #{id} not found", 1 if url.nil?
-      puts "opening bookmark ".grn + url
-      openweb(url)  # No wrap() needed - system() handles it
-      open_bookmark bm unless bm.empty?
+    # bookmark ids, opened in order. reading every configured source costs
+    # hundreds of milliseconds, so the parsed set is taken as an argument when
+    # the caller already has one - the picker does - and looked up once for the
+    # whole list rather than once per id, which is what the old recursion did
+    def open_bookmark(bm, store = nil)
+      store ||= Bookmarks.new
+
+      bm.each do |id|
+        url = store.bookmark_url(id)
+        pexit "Failure:".red + " bookmark #{id} not found", 1 if url.nil?
+        puts "opening bookmark ".grn + url
+        openweb(url)  # No wrap() needed - system() handles it
+      end
     end
 
     def open_search(term)
@@ -147,18 +156,24 @@ module Booker
     def pick_or_search(term)
       if Picker.enabled?
         bookmarks = Bookmarks.new(term)
-        unless bookmarks.allurls.empty?
-          ids = Picker.new.select(bookmarks.rows)
-          exit 0 if ids.nil? || ids.empty?
-          return open_bookmark(ids)
-        end
+        pick_and_open(bookmarks) unless bookmarks.allurls.empty?
       end
 
       open_search(term)
     end
 
-    def show_bookmarks(force_table: false)
-      bookmarks = Bookmarks.new("") # Get all bookmarks
+    # offer the bookmarks as a choice and open what comes back. either way this
+    # ends the run: cancelling the picker is a decision, not a fallthrough to
+    # whatever the caller would have done instead
+    def pick_and_open(bookmarks)
+      id = Picker.select(bookmarks.rows)
+      exit 0 if id.nil?
+      open_bookmark([id], bookmarks)
+      exit 0
+    end
+
+    def show_bookmarks(term = "", force_table: false)
+      bookmarks = Bookmarks.new(term)
       allurls = bookmarks.allurls
 
       if allurls.empty?
@@ -169,12 +184,7 @@ module Booker
 
       # the picker owns the screen when there is one, so nothing is printed
       # above it. --list forces the table back for anyone who wants it
-      if !force_table && Picker.enabled?
-        ids = Picker.new.select(bookmarks.rows)
-        exit 0 if ids.nil? || ids.empty?
-        open_bookmark(ids)
-        exit 0
-      end
+      pick_and_open(bookmarks) if !force_table && Picker.enabled?
 
       puts "Bookmarks:".grn + " (usage: booker <id> or booker <search>)"
       puts ""
