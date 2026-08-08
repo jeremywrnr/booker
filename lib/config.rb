@@ -30,8 +30,13 @@ module Browser
     end
   end
 
+  # does this argument look like a website rather than a search term? matches
+  # anything carrying an explicit scheme, or a bare host with a dot and an
+  # alphabetic tld. tab completion inserts real bookmark urls, so every tld has
+  # to work here - not just the handful (io|com|net|org|...) we used to list,
+  # which sent bookmarks on .dev or .ai off to the search engine instead.
   def domain
-    /.*(io|com|web|net|org|gov|edu|xyz)(\/.*)?$/i
+    %r{\A(?:[a-z][a-z0-9+.-]*://\S+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d+)?(?:[/?#]\S*)?)\z}i
   end
 
   # helper methods

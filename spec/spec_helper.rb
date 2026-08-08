@@ -2,6 +2,7 @@ require_relative "../lib/booker"
 require "rubygems"
 require "rspec"
 require "json"
+require "tmpdir"
 
 # Redirect stderr and stdout while testing
 SILENT = true
