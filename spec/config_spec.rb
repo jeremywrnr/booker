@@ -241,3 +241,55 @@ RSpec.describe "Booker::Config against a home with no browsers" do
       .to eq([File.join(base, "abc.default", "places.sqlite")])
   end
 end
+
+RSpec.describe "Booker::Config picker key" do
+  def config_with(yaml)
+    Dir.mktmpdir do |tmp|
+      target = File.join(tmp, ".booker.yml")
+      File.write(target, yaml)
+      stub_const("Booker::Config::YAMLCONF", target)
+      yield Booker::Config.new
+    end
+  end
+
+  it "accepts a picker command rather than exiting on an unknown key" do
+    config_with({picker: "sk --height=40%", bookmarks: ["/a"]}.to_yaml) do |config|
+      expect(config.picker).to eq("sk --height=40%")
+    end
+  end
+
+  it "is nil when the config does not name one" do
+    config_with({bookmarks: ["/a"]}.to_yaml) do |config|
+      expect(config.picker).to be_nil
+    end
+  end
+
+  # the key is deliberately absent from the generated defaults: a config naming
+  # it cannot be read by a booker old enough to predate the key
+  it "is not written into a freshly generated config" do
+    Dir.mktmpdir do |tmp|
+      target = File.join(tmp, ".booker.yml")
+      stub_const("Booker::Config::YAMLCONF", target)
+
+      Booker::Config.new.write
+
+      expect(YAML.load_file(target)).not_to have_key(:picker)
+    end
+  end
+end
+
+RSpec.describe "Booker::Browser#prep against completed urls" do
+  include Booker::Browser
+
+  # tab completion inserts real bookmark urls, and browsers store plenty that
+  # are not http - testing for "http" alone turned those into nonsense
+  it "leaves any explicit scheme alone" do
+    expect(prep("chrome://bookmarks/")).to eq("chrome://bookmarks/")
+    expect(prep("file:///Users/me/notes.html")).to eq("file:///Users/me/notes.html")
+    expect(prep("ftp://example.com/pub")).to eq("ftp://example.com/pub")
+  end
+
+  it "still invents a scheme for a bare host" do
+    expect(prep("example.com/path")).to eq("http://example.com/path")
+  end
+end

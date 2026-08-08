@@ -13,11 +13,15 @@ module Booker
     include Browser
     include Output
 
-    # tab completion hands back "<source index>_<browser id>". chrome and firefox
-    # number their bookmarks, but safari uses a uuid, so an id is a source index
+    # a bookmark id is "<source index>_<browser id>". chrome and firefox number
+    # their bookmarks, but safari uses a uuid, so an id is a source index
     # followed by anything id-shaped - matching only digits sent every safari
     # bookmark to the search engine instead of opening it. bare digits stay valid
     # for single-source configs written before the source prefix existed.
+    #
+    # tab completion inserts urls now rather than ids, but ids remain a first
+    # class argument: --bookmark takes them, the picker selects by them, and
+    # anything scripted against the older completions still works.
     BOOKMARK_ID = /\A(?:\d+_[a-z0-9-]+|[0-9_]+)\z/i
 
     def initialize(args)
@@ -36,11 +40,17 @@ module Booker
       open_bookmark(bookmark_ids) unless bookmark_ids.empty?
 
       unless other_args.empty?
-        if other_args.length == 1 && domain.match(other_args.first)
-          puts "opening website: ".grn + other_args.first
-          openweb(prep(other_args.first))
+        # every argument being a url means they all came from tab completion,
+        # which inserts one per bookmark - open the lot. a single non-url word
+        # among them makes the whole line a search again, so a phrase that
+        # happens to contain a domain still reaches the search engine
+        if other_args.all? { |arg| domain.match?(arg) }
+          other_args.each do |site|
+            puts "opening website: ".grn + site
+            openweb(prep(site))
+          end
         else
-          open_search(other_args.join(" ").strip)
+          pick_or_search(other_args.join(" ").strip)
         end
       end
     end
@@ -53,6 +63,7 @@ module Booker
         opts.on("-b", "--bookmark", "explicitly open bookmark") { @mode = :bookmark }
         opts.on("-i", "--install", "install: all|bookmarks|completion|config|safari") { @mode = :install }
         opts.on("-s", "--search", "explicitly search arguments") { @mode = :search }
+        opts.on("-l", "--list", "print the bookmark table, skipping the picker") { @mode = :list }
         opts.separator ""
         opts.separator "Other options:"
         opts.on("-c", "--complete", "show tab completions") { @mode = :complete }
@@ -80,6 +91,8 @@ module Booker
       when :search
         pexit "Error: ".red + "--search requires an argument", 1 if args.empty?
         open_search(args.join(" "))
+      when :list
+        show_bookmarks(force_table: true)
       when :complete
         Bookmarks.new(args.join(" ")).autocomplete
       when :complete_raw
@@ -126,17 +139,45 @@ module Booker
       openweb(search + term)  # No shell escape needed - it's a URL
     end
 
-    def show_bookmarks
-      puts "Bookmarks:".grn + " (usage: booker <id> or booker <search>)"
-      puts ""
+    # a term matching bookmarks is offered as a choice; one matching nothing is
+    # a search, exactly as it always was - `booker how to use the internet` hits
+    # no title, folder or url, so it still reaches the search engine. cancelling
+    # the picker is a decision rather than a fallthrough, and `booker -s <term>`
+    # is still there to demand the search outright
+    def pick_or_search(term)
+      if Picker.enabled?
+        bookmarks = Bookmarks.new(term)
+        unless bookmarks.allurls.empty?
+          ids = Picker.new.select(bookmarks.rows)
+          exit 0 if ids.nil? || ids.empty?
+          return open_bookmark(ids)
+        end
+      end
 
-      allurls = Bookmarks.new("").allurls # Get all bookmarks
+      open_search(term)
+    end
+
+    def show_bookmarks(force_table: false)
+      bookmarks = Bookmarks.new("") # Get all bookmarks
+      allurls = bookmarks.allurls
 
       if allurls.empty?
         puts "No bookmarks found.".red
         puts "Run: ".yel + "booker --install bookmarks".cyan
         exit 0
       end
+
+      # the picker owns the screen when there is one, so nothing is printed
+      # above it. --list forces the table back for anyone who wants it
+      if !force_table && Picker.enabled?
+        ids = Picker.new.select(bookmarks.rows)
+        exit 0 if ids.nil? || ids.empty?
+        open_bookmark(ids)
+        exit 0
+      end
+
+      puts "Bookmarks:".grn + " (usage: booker <id> or booker <search>)"
+      puts ""
 
       # Calculate responsive column widths
       term_width = Term.width

@@ -44,8 +44,11 @@ module Booker
     end
 
     # helper methods
+    # only a bare host needs a scheme invented for it. testing for "http"
+    # alone sent everything else through the same branch, so a completed
+    # chrome://bookmarks/ or file:///... came out as http://chrome://bookmarks/
     def prep(url)
-      if /^http/.match?(url)
+      if %r{\A[a-z][a-z0-9+.-]*://}i.match?(url)
         url
       else
         "http://" + url
@@ -59,7 +62,7 @@ module Booker
 
   # configuration
   class Config
-    VALID = [:searcher, :bookmarks, :browser].freeze
+    VALID = [:searcher, :bookmarks, :browser, :picker].freeze
     HOME = ENV.fetch("HOME", "/usr/local/").freeze
     YAMLCONF = (HOME + "/.booker.yml").freeze
 
@@ -198,5 +201,13 @@ module Booker
     end
 
     def searcher = @config[:searcher]
+
+    # the interactive finder command, as a string with its flags - booker splits
+    # it with Shellwords rather than handing it to a shell. nil means "auto
+    # detect fzf", which is why it is deliberately absent from the defaults
+    # #write generates: a config that names it cannot be read by a booker old
+    # enough to predate the key, and #initialize above exits on keys it does not
+    # know
+    def picker = @config[:picker]
   end
 end

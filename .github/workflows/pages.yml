@@ -1,0 +1,57 @@
+name: Pages
+
+# every merge into main redeploys the site, so the published readme and the
+# coverage report always describe main rather than whenever this last ran by
+# hand. pull requests deliberately do not deploy - they cannot be allowed to
+# publish, and the deploy needs write permissions a fork PR must not get.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# let a running deploy finish rather than cancelling it midway, but queue only
+# one behind it: with several merges in a row, the newest is the one worth
+# publishing and the ones in between are already superseded
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          # the version the coverage gate is measured against in ci.yml
+          ruby-version: "4.0"
+          bundler-cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      # the same recipe you run locally: coverage first, then the site build.
+      # a failing suite or a coverage floor breach stops the deploy here, so a
+      # broken main cannot replace a good page with a worse one
+      - name: Build site
+        run: just docs
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

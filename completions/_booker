@@ -11,11 +11,14 @@ _booker_bookmarks() {
     local -a bookmarks sites search_terms
     search_terms=()
 
-    #filter out 'booker', flags, and already-selected bookmark IDs. the id
-    #pattern mirrors BOOKMARK_ID in lib/booker/cli.rb, which is the source of
-    #truth - safari ids are uuids, so digits alone do not cover them
+    #filter out 'booker', flags, already-completed URLs, and bookmark IDs typed
+    #by hand. completion inserts URLs, so anything carrying a scheme is a
+    #previous pick rather than a search term. the id pattern mirrors
+    #BOOKMARK_ID in lib/booker/cli.rb, which is the source of truth - safari
+    #ids are uuids, so digits alone do not cover them
     for arg in "$@"; do
-        if [[ "$arg" != "booker" && "$arg" != -* && ! "$arg" =~ ^([0-9]+_[a-zA-Z0-9-]+|[0-9_]+)$ ]]; then
+        if [[ "$arg" != "booker" && "$arg" != -* && "$arg" != *://* \
+              && ! "$arg" =~ ^([0-9]+_[a-zA-Z0-9-]+|[0-9_]+)$ ]]; then
             search_terms+=("$arg")
         fi
     done
@@ -31,20 +34,24 @@ _booker_bookmarks() {
     RESET=`echo -e "\033[0;0m"`
 
     #parse parts, color. the p flag makes zsh read \t as a real tab
-    local -a ids links
+    local -a urls links
     for bookmark in ${bookmarks[@]}; do
         local -a split
         split=("${(@ps:\t:)bookmark}")
-        ids+=( $split[1] )
+        urls+=( $split[3] )
         links+=("$split[2] $BLUE$split[3]$RESET")
     done
 
-    #finally, add completions. 'list force' keeps the list on screen even when
-    #a single bookmark matches - without it zsh silently inserts a bare id like
-    #2_73D260E7-0A7C-4C32 and nothing says which bookmark that was
+    #finally, add completions. the inserted value is the URL rather than the
+    #bookmark id: the id was opaque on the command line, and booker opens a URL
+    #argument directly, so both land in the same place. no -Q, so zsh quotes the
+    #query strings and fragments that URLs are full of.
+    #
+    #'list force' keeps the list on screen even when a single bookmark matches,
+    #so you can still read the folder and title of what is about to be inserted
     compstate[insert]=menu
     compstate[list]='list force'
-    compadd -U -l -X 'found bookmarks:' -d links -a ids
+    compadd -U -l -X 'found bookmarks:' -d links -a urls
 }
 
 

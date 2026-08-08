@@ -22,11 +22,14 @@ _booker() {
         return 0
     fi
 
-    # everything typed so far, minus the command name, flags, and any
-    # already-selected bookmark ids
+    # everything typed so far, minus the command name, flags, any URL already
+    # completed onto the line, and any bookmark id typed by hand
     for arg in "${COMP_WORDS[@]:1}"; do
         [[ -z "$arg" ]] && continue
         [[ "$arg" == -* ]] && continue
+        # completion inserts URLs, so a scheme marks a previous pick rather
+        # than something to search for
+        [[ "$arg" == *://* ]] && continue
         # mirrors BOOKMARK_ID in lib/booker/cli.rb: safari ids are uuids
         [[ "$arg" =~ ^([0-9]+_[a-zA-Z0-9-]+|[0-9_]+)$ ]] && continue
         search_terms+=("$arg")

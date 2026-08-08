@@ -28,6 +28,14 @@ cov:
 cov-html: cov
     open coverage/index.html
 
+# Build the github pages site into site/ (readme + the coverage report)
+docs: cov
+    bundle exec ruby docs/build.rb
+
+# Open the built site
+docs-open: docs
+    open site/index.html
+
 # Everything CI checks: tests with coverage, then lint
 ci: cov lint
 

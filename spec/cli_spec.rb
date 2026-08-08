@@ -251,3 +251,140 @@ RSpec.describe "the bookmark table" do
     expect(row).to include(first.url[0, 20])
   end
 end
+
+RSpec.describe "the interactive picker" do
+  # the picker replaces the two entry points that used to dead end: bare
+  # `booker`, which only ever printed a table, and a search term that matches
+  # bookmarks, which only ever reached the search engine
+  before do
+    allow_any_instance_of(Booker::Config).to receive(:bookmarks)
+      .and_return([fixture_path("bookmarks.json")])
+    Booker::Picker.enabled = true
+  end
+
+  # every path here ends in exit, and SystemExit is not a StandardError - one
+  # escaping an example would abort rspec itself
+  def catch_exit
+    yield
+  rescue SystemExit
+    nil
+  end
+
+  def first_id = Booker::Bookmarks.new("").allurls.first.id
+
+  def picks(*ids)
+    allow_any_instance_of(Booker::Picker).to receive(:select).and_return(ids)
+  end
+
+  it "opens what was picked instead of printing the table" do
+    picks(first_id)
+    output = capture_stdout { catch_exit { Booker::CLI.new([]) } }
+
+    expect(output).to include("opening bookmark")
+    expect(output).not_to include("Found ")
+  end
+
+  it "offers a matching search term as a choice rather than searching for it" do
+    picks(first_id)
+    output = capture_stdout { catch_exit { Booker::CLI.new(["github"]) } }
+
+    expect(output).to include("opening bookmark")
+    expect(output).not_to include("searching")
+  end
+
+  it "hands the picker every match, not just the first" do
+    expect_any_instance_of(Booker::Picker).to receive(:select) do |_, rows|
+      expect(rows.length).to eq(Booker::Bookmarks.new("github").allurls.length)
+      expect(rows).to all(include("\t"))
+      []
+    end
+
+    catch_exit { Booker::CLI.new(["github"]) }
+  end
+
+  it "opens every bookmark when several are picked" do
+    ids = Booker::Bookmarks.new("github").allurls.first(2).map(&:id)
+    picks(*ids)
+    output = capture_stdout { catch_exit { Booker::CLI.new(["github"]) } }
+
+    expect(output.scan("opening bookmark").length).to eq(2)
+  end
+
+  it "does nothing at all when the picker is cancelled" do
+    picks
+    output = capture_stdout do
+      expect { Booker::CLI.new(["github"]) }.to exit_with_code(0)
+    end
+
+    expect(output).not_to include("opening bookmark")
+    expect(output).not_to include("searching")
+  end
+
+  it "still searches for a term that matches no bookmark" do
+    expect_any_instance_of(Booker::Picker).not_to receive(:select)
+    expect(capture_stdout { catch_exit { Booker::CLI.new(["zzzznotabookmark"]) } })
+      .to include("searching")
+  end
+
+  it "still opens a bare url without offering a choice" do
+    expect_any_instance_of(Booker::Picker).not_to receive(:select)
+    expect(capture_stdout { Booker::CLI.new(["example.com"]) })
+      .to include("opening website")
+  end
+
+  it "falls back to the old behavior when no finder is installed" do
+    Booker::Picker.enabled = false
+    expect(capture_stdout { catch_exit { Booker::CLI.new(["github"]) } })
+      .to include("searching")
+  end
+
+  it "prints the table anyway for --list" do
+    output = capture_stdout do
+      expect { Booker::CLI.allocate.dispatch_option(["-l"]) }.to exit_with_code(0)
+    end
+
+    expect(output).to include("Bookmarks:")
+    expect(output).to match(/Found \d+ bookmarks/)
+  end
+
+  it "explains how to install when there are no bookmarks to pick from" do
+    allow_any_instance_of(Booker::Config).to receive(:bookmarks).and_return([])
+    expect_any_instance_of(Booker::Picker).not_to receive(:select)
+
+    output = capture_stdout { catch_exit { Booker::CLI.new([]) } }
+    expect(output).to include("No bookmarks found")
+  end
+end
+
+RSpec.describe "urls handed over by tab completion" do
+  # completion inserts the bookmark url rather than its id, and zsh's automenu
+  # lets you pick several before hitting return, so a line of them has to open
+  # every one
+  before do
+    allow_any_instance_of(Booker::Config).to receive(:bookmarks)
+      .and_return([fixture_path("bookmarks.json")])
+  end
+
+  def urls = Booker::Bookmarks.new("").allurls.map(&:url)
+
+  it "opens a single completed url" do
+    expect(capture_stdout { Booker::CLI.new([urls.first]) })
+      .to include("opening website")
+  end
+
+  it "opens every url on the line, not just the first" do
+    output = capture_stdout { Booker::CLI.new(urls.first(3)) }
+    expect(output.scan("opening website").length).to eq(3)
+  end
+
+  it "recognizes every url the raw feed emits as a url" do
+    matcher = Booker::CLI.allocate.domain
+    expect(urls).not_to be_empty
+    expect(urls.reject { |u| matcher.match?(u) }).to be_empty
+  end
+
+  it "still treats a phrase containing a domain as a search" do
+    expect(capture_stdout { Booker::CLI.new(%w[read example.com later]) })
+      .to include("searching")
+  end
+end

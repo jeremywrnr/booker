@@ -63,14 +63,20 @@ module Booker
       end
     end
 
-    # machine readable feed for the shell completion scripts - one tab separated
-    # id/title/url triple per line. unlike #autocomplete this is never truncated
-    # or padded, and never depends on the terminal width: `tput cols` is unreliable inside
-    # a completion subshell, and a truncated url would open a broken link.
-    def autocomplete_raw
-      @allurls.each do |url|
-        puts [url.id, display_name(url), url.url.delete("\t\n")].join("\t")
+    # one tab separated id/title/url triple per bookmark. unlike #autocomplete
+    # these are never truncated or padded, and never depend on the terminal
+    # width: `tput cols` is unreliable inside a completion subshell, and a
+    # truncated url would open a broken link. shared by the shell completion
+    # feed below and by the interactive picker, which want the same three fields
+    def rows
+      @allurls.map do |url|
+        [url.id, display_name(url), url.url.delete("\t\n")].join("\t")
       end
+    end
+
+    # machine readable feed for the shell completion scripts
+    def autocomplete_raw
+      rows.each { |row| puts row }
     end
 
     # clean title for completion, delete anything not allowed in linktitle

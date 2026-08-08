@@ -5,7 +5,10 @@
 if ENV["COVERAGE"]
   require "simplecov"
   SimpleCov.start do
-    add_filter "/spec/"
+    # simplecov 1.0's default test_frameworks profile already skips /spec/, but
+    # say it anyway - the floor below is only meaningful if the denominator is
+    # lib/, and that should not rest on a default profile staying put
+    skip "/spec/"
     # Every platform specific path - safari/plutil, open, the darwin checks - is
     # stubbed rather than shelled out to, so mac and linux report the same
     # number and the floor can sit at the top. CI measures coverage on linux.
@@ -67,6 +70,14 @@ RSpec.configure do |config|
   # noise has to go somewhere. per example rather than per file: the redirect
   # is torn down before rspec reports, so a failure still prints its own
   # message, and `capture_stdout` / the `output` matcher nest inside this
+  # the suite is already safe by construction - the redirect below hands $stdout
+  # a File on /dev/null, and capture_stdout hands it a StringIO, neither of
+  # which is a terminal - but saying so keeps a future change to that redirect
+  # from quietly arming the picker halfway through the suite. #reset! also drops
+  # the memoized picker command, which would otherwise leak between examples
+  config.before(:each) { Booker::Picker.enabled = false }
+  config.after(:each) { Booker::Picker.reset! }
+
   config.around(:each) do |example|
     original_stdout = $stdout
     original_stderr = $stderr
