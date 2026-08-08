@@ -25,8 +25,10 @@ RSpec.describe Booker::Picker do
       expect(with_finder(["head", "-1"]).select(rows)).to eq(["0_abc"])
     end
 
-    it "returns every id when the finder chooses several" do
-      expect(with_finder(["cat"]).select(rows)).to eq(%w[0_abc 1_abc 2_abc])
+    # `cat` hands every candidate back, standing in for a finder configured
+    # with --multi. one return press must never become several browser tabs
+    it "opens only one bookmark even if the finder returns several" do
+      expect(with_finder(["cat"]).select(rows)).to eq(["0_abc"])
     end
 
     it "returns no ids when nothing matched" do
@@ -57,6 +59,19 @@ RSpec.describe Booker::Picker do
       picker = with_finder(["cat"])
       allow(IO).to receive(:popen).and_raise(Interrupt)
       expect(picker.select(rows)).to eq([])
+    end
+  end
+
+  describe "DEFAULT" do
+    # under --multi, fzf reads tab as "mark this one and move down" - and tab is
+    # exactly what booker's own completion trained everyone to press here, so a
+    # couple of taps used to mark several bookmarks and open all of them
+    it "does not ask fzf for multi select" do
+      expect(described_class::DEFAULT).not_to include("--multi")
+    end
+
+    it "keeps the id out of sight and out of the match" do
+      expect(described_class::DEFAULT).to include("--with-nth=2..", "--delimiter=\t")
     end
   end
 

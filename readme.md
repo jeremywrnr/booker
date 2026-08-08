@@ -14,6 +14,13 @@ zsh, bash, and fish.
 ## setup
 
     [sudo] gem install booker
+
+That is the whole install. With [fzf](https://github.com/junegunn/fzf) on your
+`PATH`, `booker` and `booker <search>` open a fuzzy picker over your bookmarks
+straight away - no shell configuration, and the same in zsh, bash and fish.
+
+Tab completion is an extra rather than the way in. If you want it:
+
     booker --install
 
 Alternatively, the installation can be done incrementally:
@@ -53,8 +60,10 @@ machine. To set up just one:
 ## the interactive picker
 
 If [fzf](https://github.com/junegunn/fzf) is on your `PATH`, `booker` and `booker
-<search>` open a fuzzy picker over the matching bookmarks and open whichever you
-choose. `Tab` marks several to open at once; `Esc` cancels and does nothing.
+<search>` open a fuzzy picker over the matching bookmarks. `Return` opens the one
+you land on, and `Esc` cancels and does nothing. One bookmark per run - booker
+does not pass `--multi`, so `Tab` will not quietly mark a pile of them to open
+all at once.
 
 The picker only appears when booker is talking to a terminal on both ends, so
 pipes (`booker --complete-raw | ...`), scripts, and the tab completion subshells

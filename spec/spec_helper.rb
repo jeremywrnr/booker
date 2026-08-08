@@ -85,6 +85,16 @@ RSpec.configure do |config|
     $stderr = File.open(File::NULL, "w")
     begin
       example.run
+      # rspec deliberately lets SystemExit through, so an example that reaches
+      # #pexit without wrapping it in an expectation ends the whole run where it
+      # stands. every later example is silently skipped and the summary counts
+      # only the ones that got to run, so it reads as a passing suite that
+      # exited 1 - a long way from the real cause. name it, and fail the one
+      # example that actually did it instead
+    rescue SystemExit => e
+      raise "example called exit(#{e.status}) outside an expectation - if that " \
+            "is the behavior under test, wrap it in `expect { }.to raise_error" \
+            "(SystemExit)` or the `exit_with_code` matcher"
     ensure
       $stdout.close
       $stderr.close

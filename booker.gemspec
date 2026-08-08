@@ -10,9 +10,10 @@ Gem::Specification.new do |g|
   g.summary = "CLI bookmark manager for Chrome, Firefox, and Safari"
   g.description = <<-EOF
     Search, browse, and open bookmarks from the command line. Supports Chrome,
-    Chromium, Firefox, and Safari. Browse all bookmarks interactively, or
-    search by keyword. Zsh, bash, and fish users get tab completion through
-    bookmark matches. Can also open websites directly or search with your
+    Chromium, Firefox, and Safari. With fzf installed, booker and booker
+    <search> open a fuzzy picker over the matches - nothing to install and the
+    same in every shell. Zsh, bash, and fish users can also add tab completion
+    through bookmark matches. Can open websites directly or search with your
     preferred search engine.
   EOF
 
@@ -48,5 +49,8 @@ Gem::Specification.new do |g|
   g.add_dependency "json", "~> 2.21"
   g.add_dependency "sqlite3", "~> 2.9", ">= 2.9.5"
   g.add_dependency "rexml", "~> 3.4"
-  g.post_install_message = "To add zsh, bash, or fish completion run: booker --install"
+
+  # no post_install_message: `booker` and `booker <search>` open the fzf picker
+  # on their own, so there is nothing a fresh install has to be told to run.
+  # tab completion is an extra rather than the way in, and the readme covers it
 end

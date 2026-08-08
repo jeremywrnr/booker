@@ -372,3 +372,33 @@ RSpec.describe "#autocomplete_raw" do
     expect(@bm.bookmark_url(id)).to be_a(String)
   end
 end
+
+RSpec.describe "Booker::Bookmarks#rows" do
+  # the picker reads one candidate per line, split on tabs - so a separator
+  # surviving inside any field turns one bookmark into two unopenable ones
+  let(:bookmarks) do
+    allow_any_instance_of(Booker::Config).to receive(:bookmarks)
+      .and_return([fixture_path("bookmarks.json")])
+    Booker::Bookmarks.new("")
+  end
+
+  it "emits exactly one line per bookmark" do
+    expect(bookmarks.rows.length).to eq(bookmarks.allurls.length)
+    expect(bookmarks.rows).to all(satisfy { |r| !r.include?("\n") })
+  end
+
+  it "puts the id, a description and the url in three fields" do
+    expect(bookmarks.rows).to all(satisfy { |r| r.split("\t").length == 3 })
+  end
+
+  it "strips separators out of a folder name that carries them" do
+    noisy = Booker::Bookmark.new(
+      folder: "we\tird\nfolder", title: "t", url: "https://example.com", id: "0_1"
+    )
+    # #rows reads the ivar rather than the reader, so stub the ivar
+    bookmarks.instance_variable_set(:@allurls, [noisy])
+
+    expect(bookmarks.rows.length).to eq(1)
+    expect(bookmarks.rows.first.split("\t").length).to eq(3)
+  end
+end

@@ -68,9 +68,13 @@ module Booker
     # width: `tput cols` is unreliable inside a completion subshell, and a
     # truncated url would open a broken link. shared by the shell completion
     # feed below and by the interactive picker, which want the same three fields
+    # tabs and newlines are stripped from every field, not just the url: they
+    # are the row and column separators, so one surviving inside a folder name
+    # would split that bookmark into two candidates - two lines the picker
+    # offers separately, and neither of them openable
     def rows
       @allurls.map do |url|
-        [url.id, display_name(url), url.url.delete("\t\n")].join("\t")
+        [url.id, display_name(url), url.url].map { |f| f.to_s.delete("\t\n") }.join("\t")
       end
     end
 
@@ -158,5 +162,12 @@ module Booker
     def initialize(folder:, title:, url:, id:, source: nil)
       super(folder:, title: title.gsub(/[:'"+]/, " ").downcase, url:, id:, source:)
     end
+
+    # ruby 3.2's Data#with copies the members straight across without going back
+    # through #initialize, so a title replaced there would keep its punctuation
+    # and its case. 3.3 fixed that; this is the same thing spelled out, so the
+    # gemspec's ">= 3.2" floor holds rather than being true of everything except
+    # this one method
+    def with(**changes) = self.class.new(**to_h.merge(changes))
   end
 end

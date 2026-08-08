@@ -39,10 +39,21 @@ docs-open: docs
 # Everything CI checks: tests with coverage, then lint
 ci: cov lint
 
-# Build and install the gem
+# The completion scripts are copied into $fpath at install time, so a fresh gem
+# on its own leaves the old ones sitting on disk. 'completion' rather than a
+# bare --install: the latter also regenerates the config and prompts for a
+# bookmarks source, neither of which belongs in a build.
+#
+# just takes the last comment line as the recipe's description, so the summary
+# goes here rather than above the rationale
+# Build and install the gem, refreshing shell completions with it
 build:
     gem build {{gem_name}}.gemspec
     gem install {{gem_name}}-{{version}}.gem
+    booker --install completion
+    @echo ""
+    @echo "zsh caches _booker for the session. to pick it up in this shell:"
+    @echo "  unfunction _booker && autoload -U _booker"
 
 # Clean up gem files
 clean:

@@ -36,6 +36,24 @@ RSpec.describe "shell completion" do
   end
 
   describe "installing into a clean home" do
+    # the one place booker shells out here is `zsh -c 'echo $fpath'`, and it
+    # treats a missing zsh as fatal - so an unstubbed call does not just fail an
+    # example, it exits the process and takes the rest of the suite with it.
+    # pinned for the whole block rather than per example: ubuntu ships no zsh at
+    # all, and a developer whose $fpath happens to hold a writable dir would
+    # otherwise skip the ~/.zsh/completion branch the specs below describe.
+    # entries deliberately outside the temp HOME, so the install falls through
+    # to creating ~/.zsh/completion - which zsh only reads once ~/.zshrc puts it
+    # on $fpath, hence the rc file edits further down
+    before do
+      allow(Open3).to receive(:capture3)
+        .with("zsh", "-c", "echo $fpath")
+        .and_return(["/usr/share/zsh/site-functions\n", "", nil])
+      # the reload nudge after a successful write. nothing reads its result, and
+      # it is the same missing binary on linux
+      allow(booker).to receive(:system).with("zsh", "-c", "autoload -U _booker")
+    end
+
     around do |example|
       Dir.mktmpdir do |tmp|
         saved = ENV.to_hash.slice("HOME", "XDG_DATA_HOME", "XDG_CONFIG_HOME")
@@ -91,19 +109,7 @@ RSpec.describe "shell completion" do
       expect(File.exist?(File.join(@home, ".zsh/completion/_booker"))).to be true
     end
 
-    # every $fpath entry the real zsh reports is outside this temp HOME, so the
-    # install falls through to creating ~/.zsh/completion - which zsh only reads
-    # once ~/.zshrc puts it on $fpath, hence the rc file edits below
     describe "wiring ~/.zshrc up to the created completion dir" do
-      # pinned rather than inherited from the machine's zsh: a developer whose
-      # $fpath happens to hold a writable dir would otherwise skip this branch
-      before do
-        allow(Open3).to receive(:capture3)
-          .with("zsh", "-c", "echo $fpath")
-          .and_return(["/usr/share/zsh/site-functions\n", "", nil])
-        allow(booker).to receive(:system)
-      end
-
       it "adds the fpath lines when zshrc does not mention the dir yet" do
         zshrc = File.join(@home, ".zshrc")
         File.write(zshrc, "export EDITOR=vim\n")

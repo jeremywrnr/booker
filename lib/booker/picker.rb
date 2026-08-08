@@ -15,9 +15,14 @@ module Booker
   class Picker
     # --delimiter/--with-nth hide the id column: booker needs it back, but it is
     # noise on screen, and hiding it also takes it out of the match, so typing
-    # "2_" does not pull up every bookmark from the second source. --multi is
-    # nearly free, since CLI#open_bookmark already takes several ids and
-    # recurses. --no-sort keeps booker's own ordering.
+    # "2_" does not pull up every bookmark from the second source. --no-sort
+    # keeps booker's own ordering.
+    #
+    # deliberately no --multi. picking a bookmark is a one-at-a-time thing, and
+    # under --multi fzf reads tab as "mark this and move down" - the one key
+    # booker's own completion trained everybody to press here. a couple of taps
+    # to scroll would silently mark a handful of bookmarks and open all of them
+    # on the next return.
     #
     # a plain array literal rather than %w[]: the delimiter is a real tab and
     # the prompt ends in a space, and neither survives %w[]
@@ -25,7 +30,6 @@ module Booker
       "fzf",
       "--height=40%",
       "--reverse",
-      "--multi",
       "--no-sort",
       "--delimiter=\t",
       "--with-nth=2..",
@@ -109,10 +113,14 @@ module Booker
       # exiting 0 the moment it is closed, before it has read anything
       return [] unless Process.last_status&.exitstatus&.zero?
 
-      chosen.lines.filter_map do |line|
+      # at most one, whatever came back. dropping --multi above stops fzf
+      # offering multi select in the first place, but a picker named in
+      # ~/.booker.yml can still be configured for it, and one return press
+      # turning into six browser tabs is never what was meant
+      chosen.lines.filter_map { |line|
         id = line.split("\t", 2).first.strip
         id unless id.empty?
-      end
+      }.first(1)
     rescue Errno::ENOENT
       # the binary went away between the PATH check and the spawn
       nil

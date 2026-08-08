@@ -302,12 +302,15 @@ RSpec.describe "the interactive picker" do
     catch_exit { Booker::CLI.new(["github"]) }
   end
 
-  it "opens every bookmark when several are picked" do
-    ids = Booker::Bookmarks.new("github").allurls.first(2).map(&:id)
-    picks(*ids)
+  # the picker opens one bookmark per run. ids listed on the command line are a
+  # different matter - `booker 1_2 3_4` still opens both, and always has
+  it "opens exactly one bookmark per run" do
+    # Picker#select caps what the finder returns, so the cli only ever sees
+    # one id here - the cap itself is covered in picker_spec
+    picks(Booker::Bookmarks.new("github").allurls.first.id)
     output = capture_stdout { catch_exit { Booker::CLI.new(["github"]) } }
 
-    expect(output.scan("opening bookmark").length).to eq(2)
+    expect(output.scan("opening bookmark").length).to eq(1)
   end
 
   it "does nothing at all when the picker is cancelled" do
