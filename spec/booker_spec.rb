@@ -9,6 +9,12 @@ module Browser
 end
 
 describe Booker do
+  def catch_exit
+    yield
+  rescue SystemExit
+    nil
+  end
+
   def run(str)
     Booker.new(str.split)
   end
@@ -46,7 +52,7 @@ describe Booker do
 
   it "should print the valid version out" do
     %w[--version -v].each do |opt|
-      expect { run(opt) }.to output(Booker.version).to_stdout
+      expect { catch_exit { run(opt) } }.to output(Booker.version).to_stdout
     end
   end
 

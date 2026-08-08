@@ -21,10 +21,11 @@ Gem::Specification.new do |g|
   g.files = ["lib/booker.rb", "lib/bookmarks.rb", "lib/config.rb", "lib/consts.rb"]
   g.homepage = "http://github.com/jeremywrnr/booker"
 
-  g.add_runtime_dependency "json", "~> 2.7"
-  g.add_runtime_dependency "sqlite3", "~> 1.7"
-  g.add_runtime_dependency "rexml", "~> 3.2"
+  g.required_ruby_version = ">= 3.1"
+  g.add_runtime_dependency "json", "~> 2.21"
+  g.add_runtime_dependency "sqlite3", "~> 2.9", ">= 2.9.5"
+  g.add_runtime_dependency "rexml", "~> 3.4"
   g.add_development_dependency "rspec", "~> 3.13"
-  g.add_development_dependency "standard", "~> 1.0"
+  g.add_development_dependency "standard", "~> 1.56"
   g.post_install_message = "To add zsh completion run: booker --install"
 end
