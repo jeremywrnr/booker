@@ -11,7 +11,7 @@ require_relative "consts"
 
 # get booker opening command
 class Booker
-  @version = "1.3.0"
+  @version = "2.0.0"
   @@version = @version
 
   # shells we ship completion for, and where those scripts live
