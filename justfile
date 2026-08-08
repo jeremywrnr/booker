@@ -16,6 +16,13 @@ spec:
 format:
     bundle exec standardrb --fix
 
+# Check formatting without changing files
+lint:
+    bundle exec standardrb
+
+# Everything CI checks: tests and lint
+ci: spec lint
+
 # Build and install the gem
 build:
     gem build {{gem_name}}.gemspec
