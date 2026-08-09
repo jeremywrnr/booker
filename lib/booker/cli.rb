@@ -11,15 +11,11 @@ module Booker
     include Browser
     include Output
 
-    # a bookmark id is "<source index>_<browser id>". chrome and firefox number
-    # their bookmarks, but safari uses a uuid, so an id is a source index
-    # followed by anything id-shaped - matching only digits sent every safari
-    # bookmark to the search engine instead of opening it. bare digits stay valid
-    # for single-source configs written before the source prefix existed.
-    #
-    # tab completion inserts urls now rather than ids, but ids remain a first
-    # class argument: --bookmark takes them, the picker selects by them, and
-    # anything scripted against the older completions still works.
+    # a bookmark id is "<source index>_<browser id>". safari uses a uuid where
+    # chrome and firefox number theirs, so the second half is anything id-shaped
+    # rather than digits; bare digits stay valid for single-source configs
+    # written before the prefix existed. completion inserts urls now, but ids
+    # are still first class - --bookmark takes them, the picker returns them
     BOOKMARK_ID = /\A(?:\d+_[a-z0-9-]+|[0-9_]+)\z/i
 
     def initialize(args)
@@ -39,9 +35,8 @@ module Booker
 
       unless other_args.empty?
         # every argument being a url means they all came from tab completion,
-        # which inserts one per bookmark - open the lot. a single non-url word
-        # among them makes the whole line a search again, so a phrase that
-        # happens to contain a domain still reaches the search engine
+        # which inserts one per bookmark - open the lot. one non-url word makes
+        # the whole line a search, so a phrase containing a domain still is one
         if other_args.all? { |arg| domain.match?(arg) }
           other_args.each do |site|
             puts "opening website: ".grn + site
@@ -126,18 +121,17 @@ module Booker
 
       unless success
         # system reports a missing binary as nil rather than false, but the
-        # forked child still exited - with 127, the shell convention execvp
-        # failures use - so there is a status either way. the &. is only for the
-        # case where nothing in this process has spawned a child yet
+        # forked child still exited - with 127, the shell convention for execvp
+        # failures - so there is a status either way. the &. is only for nothing
+        # in this process having spawned a child yet
         code = Process.last_status&.exitstatus
         puts "Warning: ".yel + "Failed to open URL (exit code: #{code})"
       end
     end
 
-    # bookmark ids, opened in order. reading every configured source costs
-    # hundreds of milliseconds, so the parsed set is taken as an argument when
-    # the caller already has one - the picker does - and looked up once for the
-    # whole list rather than once per id, which is what the old recursion did
+    # bookmark ids, opened in order. parsing every source costs hundreds of
+    # milliseconds, so a caller that already has the set - the picker does -
+    # passes it in, and it is searched once for the list rather than once per id
     def open_bookmark(bm, store = nil)
       store ||= Bookmarks.new
 
@@ -157,10 +151,8 @@ module Booker
     end
 
     # a term matching bookmarks is offered as a choice; one matching nothing is
-    # a search, exactly as it always was - `booker how to use the internet` hits
-    # no title, folder or url, so it still reaches the search engine. cancelling
-    # the picker is a decision rather than a fallthrough, and `booker -s <term>`
-    # is still there to demand the search outright
+    # a search, exactly as it always was. cancelling the picker is a decision
+    # rather than a fallthrough, and `booker -s <term>` still demands a search
     def pick_or_search(term)
       if Picker.enabled?
         bookmarks = Bookmarks.new(term)

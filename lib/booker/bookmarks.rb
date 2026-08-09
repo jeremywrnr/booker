@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
 # grab/parse bookmarks from every configured source, and the two value objects
-# the parsers hand back
-#
-# Set needs no require: it has been autoloaded since ruby 3.2, which is the
-# floor in the gemspec, and is core from 3.5 on
+# the parsers hand back. Set needs no require - autoloaded since ruby 3.2, the
+# floor in the gemspec
 
 require_relative "output"
 
@@ -14,11 +12,9 @@ module Booker
   # Main Bookmarks facade class
   class Bookmarks
     # one row per browser: everything booker knows about a bookmark source
-    # lives here, so a fourth browser is an entry rather than a hunt through
-    # the parser lookup, the installer's labels and its colors.
-    #
-    # chrome's bookmarks file has no extension, which is why it is the
-    # fallback rather than a row #source_for can match on
+    # lives here, so a fourth browser is an entry rather than a hunt through the
+    # parser lookup, the installer's labels and its colors. chrome's file has no
+    # extension, so it is the fallback rather than a row to match on
     BROWSERS = {
       firefox: {parser: Parsers::Firefox, ext: ".sqlite", label: "[Firefox]", color: :blu},
       safari: {parser: Parsers::Safari, ext: ".plist", label: "[Safari]", color: :cyan},
@@ -74,15 +70,12 @@ module Booker
       end
     end
 
-    # one tab separated id/title/url triple per bookmark. unlike #autocomplete
-    # these are never truncated or padded, and never depend on the terminal
-    # width: `tput cols` is unreliable inside a completion subshell, and a
-    # truncated url would open a broken link. shared by the shell completion
-    # feed below and by the interactive picker, which want the same three fields
-    # tabs and newlines are stripped from every field, not just the url: they
-    # are the row and column separators, so one surviving inside a folder name
-    # would split that bookmark into two candidates - two lines the picker
-    # offers separately, and neither of them openable
+    # one tab separated id/title/url triple per bookmark, shared by the shell
+    # completion feed and the picker. never truncated or padded, unlike
+    # #autocomplete: `tput cols` is unreliable in a completion subshell and a
+    # truncated url opens a broken link. tabs and newlines go from every field,
+    # not just the url - one surviving in a folder name splits that bookmark
+    # into two candidates the picker offers separately, neither openable
     def rows
       @allurls.map do |url|
         [url.id, display_name(url), url.url].map { |f| f.to_s.delete("\t\n") }.join("\t")
@@ -154,21 +147,18 @@ module Booker
       super(folder:, title: title.gsub(/[:'"+]/, " ").downcase, url:, id:, source:)
     end
 
-    # the folder as a reader sees it: no leading marker, no trailing slash, and
-    # a name for the top level. "|" and "|/" both mean the top level, and both
-    # leave nothing behind once the marker is stripped - the picker feed and
-    # the --list table share this rather than each deciding what "top" looks
-    # like, which is how the same bookmark ended up rendered two ways
+    # the folder as a reader sees it: no leading marker, no trailing slash, a
+    # name for the top level - which "|" and "|/" both mean, both leaving
+    # nothing behind once stripped. shared by the picker feed and the --list
+    # table, which each used to decide for itself what "top" looked like
     def display_folder
       stripped = folder.gsub(/^\|/, "").chomp("/")
       stripped.empty? ? "[root]" : stripped
     end
 
-    # ruby 3.2's Data#with copies the members straight across without going back
+    # ruby 3.2's Data#with copies members straight across instead of going back
     # through #initialize, so a title replaced there would keep its punctuation
-    # and its case. 3.3 fixed that; this is the same thing spelled out, so the
-    # gemspec's ">= 3.2" floor holds rather than being true of everything except
-    # this one method
+    # and case. 3.3 fixed it; spelling it out keeps the gemspec's ">= 3.2" true
     def with(**changes) = self.class.new(**to_h.merge(changes))
   end
 end

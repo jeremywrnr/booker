@@ -131,9 +131,8 @@ module Booker
 
         begin
           # nothing is autoloaded here on purpose: `zsh -c 'autoload -U
-          # _booker'` loaded the function into a subshell that exited on the
-          # next line. clear_zsh_compdump below is what actually reaches a new
-          # shell, and the caller is told to unfunction it in this one
+          # _booker'` loaded it into a subshell that exited on the next line.
+          # clear_zsh_compdump below is what reaches a new shell
           File.write(File.join(fp, "_booker"), completion_script("_booker"))
           puts "Success: ".grn + "installed zsh autocompletion in #{fp}"
           success = true
@@ -152,13 +151,10 @@ module Booker
     end
 
     # compinit caches what it found in $fpath, so a shell started against an old
-    # dump keeps describing the completion booker just replaced. the dump is
-    # only a cache - zsh rebuilds it on the next start - so dropping it is how a
-    # freshly installed script actually reaches a new shell.
-    #
-    # nothing here can help the shell you ran this from: zsh autoloads _booker
-    # once and keeps that copy for the life of the session, which is why the
-    # caller is told to unfunction it
+    # dump keeps describing the completion booker just replaced. dropping the
+    # cache - zsh rebuilds it on the next start - is how a new script reaches
+    # the next shell. nothing helps the shell you ran this from, which autoloaded
+    # _booker for the life of the session, hence the unfunction advice
     def clear_zsh_compdump
       base = ENV["ZDOTDIR"] || home
       dumps = Dir.glob(File.join(base, ".zcompdump*"))
@@ -229,10 +225,9 @@ module Booker
       BASH_COMPLETION_MARKERS.any? { |marker| File.exist?(marker) }
     end
 
-    # append to an rc file, but only once - install is expected to be
-    # re-runnable without stacking up duplicate lines. `marker` is what counts
-    # as "already there" when that is narrower than everything being written,
-    # and `label` is how the file is named on screen
+    # append to an rc file once - install is expected to be re-runnable without
+    # stacking up duplicates. `marker` is what counts as "already there" when
+    # that is narrower than what gets written; `label` is the name shown
     def append_once(rcfile, lines, marker: lines, label: rcfile)
       if File.exist?(rcfile) && File.read(rcfile).include?(marker)
         puts "#{label} already configured".grn
@@ -260,9 +255,8 @@ module Booker
     end
 
     # locate bookmarks files, show the user, write the choice to the config.
-    # the search itself is Sources.discover - the same code the auto-detection
-    # fallback uses, so what this offers is exactly what booker would find on
-    # its own rather than a second list that drifts away from it
+    # the search is Sources.discover, the same code auto-detection falls back
+    # on, so this offers exactly what booker would find on its own
     def install_bookmarks
       puts "searching for browser bookmarks..."
       begin

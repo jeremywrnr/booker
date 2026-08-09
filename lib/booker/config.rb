@@ -35,24 +35,21 @@ module Booker
     end
 
     # what an explicit scheme looks like. #domain and #prep are two halves of
-    # one grammar - the first decides an argument is a url, the second decides
-    # it already says how to fetch it - so they read the rule from here rather
-    # than spelling it out twice and drifting apart
+    # one grammar - is this a url, does it already say how to fetch it - so both
+    # read the rule from here rather than spelling it out twice and drifting
     SCHEME = /[a-z][a-z0-9+.-]*:\/\//i
 
-    # does this argument look like a website rather than a search term? matches
-    # anything carrying an explicit scheme, or a bare host with a dot and an
-    # alphabetic tld. tab completion inserts real bookmark urls, so every tld has
-    # to work here - not just the handful (io|com|net|org|...) we used to list,
-    # which sent bookmarks on .dev or .ai off to the search engine instead.
+    # does this argument look like a website rather than a search term? an
+    # explicit scheme, or a bare host with a dot and an alphabetic tld. every
+    # tld has to work: completion inserts real bookmark urls, and the old
+    # (io|com|net|org|...) list sent .dev and .ai off to the search engine
     def domain
       %r{\A(?:#{SCHEME}\S+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d+)?(?:[/?#]\S*)?)\z}io
     end
 
-    # helper methods
-    # only a bare host needs a scheme invented for it. testing for "http"
-    # alone sent everything else through the same branch, so a completed
-    # chrome://bookmarks/ or file:///... came out as http://chrome://bookmarks/
+    # only a bare host needs a scheme invented for it. testing for "http" alone
+    # sent everything else down the same branch, so a completed
+    # chrome://bookmarks/ came out as http://chrome://bookmarks/
     def prep(url)
       /\A#{SCHEME}/io.match?(url) ? url : "http://" + url
     end
@@ -65,10 +62,9 @@ module Booker
     YAMLCONF = (HOME + "/.booker.yml").freeze
 
     class << self
-      # one instance per run. Bookmarks, Picker and the CLI all need the same
-      # answers, and building a Config apiece meant parsing the yaml three
-      # times, running discovery three times when there is no yaml, and
-      # printing the "no config file" warning three times to say it once
+      # one instance per run. Bookmarks, Picker and the CLI want the same
+      # answers, and one Config apiece meant parsing the yaml three times,
+      # discovering three times, and warning three times to say it once
       def default = @default ||= new
 
       # the memo outlives a single example, so the suite drops it between them
@@ -76,10 +72,9 @@ module Booker
     end
 
     def initialize
-      # configure w/ yaml config file, if it exists, and only work out the
-      # defaults when there is none. detect_default_bookmarks walks every
-      # chrome profile directory, which is a lot of filesystem to touch on the
-      # way to answering a question the config file has already answered
+      # the yaml file if there is one, and only work out the defaults when
+      # there is not: discovery walks every chrome profile directory to answer
+      # a question the config file has already answered
       @config = read(YAMLCONF) || {
         browser: "open ",
         searcher: "https://google.com/search?q=",
@@ -119,10 +114,9 @@ module Booker
       warn "Suggest: ".grn + "booker --install config"
       false
     rescue Psych::Exception
-      # every psych failure means the same thing here - an unusable config we
+      # every psych failure means the same thing here - an unusable config to
       # fall back from rather than crash on. rescuing SyntaxError alone let
-      # anchors through as an AliasesNotEnabled backtrace, since psych 4
-      # stopped allowing aliases by default
+      # anchors through as an AliasesNotEnabled backtrace under psych 4
       warn "Warning: ".red +
         "YAML configuration file could not be read. Using defaults."
       false
@@ -140,22 +134,18 @@ module Booker
 
     def searcher = @config[:searcher]
 
-    # the interactive finder command, as a string with its flags - booker splits
-    # it with Shellwords rather than handing it to a shell. nil means "auto
-    # detect fzf", which is why it is deliberately absent from the defaults
-    # #write generates: a config that names it cannot be read by a booker old
-    # enough to predate the key, and #initialize above exits on keys it does not
-    # know
+    # the finder command with its flags, split with Shellwords rather than
+    # handed to a shell. nil means "auto detect fzf", which is why #write leaves
+    # it out of the defaults: #initialize exits on keys it does not know, so a
+    # config naming it is unreadable by a booker predating the key
     def picker = @config[:picker]
   end
 
   # where browsers keep their bookmarks. one implementation, shared by the
-  # auto-detection Config falls back on and by `booker --install bookmarks`:
-  # the installer's job is to show you what auto-detection would find, so a
-  # second copy of these paths guarantees it eventually shows something else.
-  #
-  # nothing here tags a source with its browser - Bookmarks.source_for reads
-  # that off the filename, exactly as it does when picking a parser
+  # auto-detection Config falls back on and by `booker --install bookmarks` -
+  # the installer's job is to show what auto-detection would find, so a second
+  # copy of these paths guarantees it eventually shows something else. nothing
+  # here tags a source: Bookmarks.source_for reads that off the filename
   module Sources
     CHROME = [
       "/Library/Application Support/Google/Chrome",      # macOS
@@ -179,9 +169,8 @@ module Booker
     class << self
       def discover = (chrome + firefox + safari).uniq
 
-      # every places.sqlite named by a profiles.ini. any Path= counts, including
-      # the one under [Install...] - the "which profile did this install last
-      # use" block firefox also writes - which names a profile already listed,
+      # every places.sqlite named by a profiles.ini. any Path= counts, and the
+      # [Install...] block firefox also writes names a profile already listed,
       # hence the uniq
       def profiles(ini_path, base)
         File.readlines(ini_path).filter_map do |line|
@@ -198,14 +187,11 @@ module Booker
       def chrome
         expand(CHROME).flat_map do |base|
           # one level down, not "**": chrome puts Bookmarks directly inside a
-          # profile directory, while the rest of the tree is Cache, Code Cache
-          # and Service Worker storage - tens of thousands of files a recursive
-          # glob walks to find nothing. the second pattern covers a base that
-          # already names a profile.
-          #
-          # globbing relative to base keeps any glob metacharacter in the path
-          # itself - a profile directory named "Chrome [work]", say - from
-          # being read as part of the pattern
+          # profile directory, and the rest of the tree is Cache and Service
+          # Worker storage - tens of thousands of files to walk for nothing. the
+          # second pattern covers a base that already names a profile. globbing
+          # relative to base keeps a metacharacter in the path itself - a
+          # profile named "Chrome [work]", say - out of the pattern
           Dir.glob(["Bookmarks", "*/Bookmarks"], base: base)
             .map { |relative| File.join(base, relative) }
             .select { |file| File.file?(file) }

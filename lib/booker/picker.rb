@@ -1,31 +1,26 @@
 # frozen_string_literal: true
 
-# an external fuzzy finder (fzf by default) as booker's selection ui. booker
-# feeds it candidate lines on stdin and reads the chosen one back on stdout;
-# the finder opens /dev/tty itself for the interface, so the pipes on either
-# side carry nothing but data.
-#
-# this knows nothing about bookmarks - it takes lines and returns the first
-# tab separated field of whatever came back, which keeps it testable against
-# `head` and `cat` rather than against a real finder.
+# an external fuzzy finder (fzf by default) as booker's selection ui: candidate
+# lines in on stdin, the chosen one back on stdout, with the finder opening
+# /dev/tty itself for the interface. it knows nothing about bookmarks - lines
+# in, first tab separated field out - which keeps it testable against `head`
+# and `cat` rather than against a real finder.
 
 require "shellwords"
 
 module Booker
   module Picker
-    # --delimiter/--with-nth hide the id column: booker needs it back, but it is
-    # noise on screen, and hiding it also takes it out of the match, so typing
-    # "2_" does not pull up every bookmark from the second source. --no-sort
-    # keeps booker's own ordering.
+    # --delimiter/--with-nth hide the id column: it is noise on screen, and
+    # hiding it also takes it out of the match, so typing "2_" does not pull up
+    # every bookmark from the second source. --no-sort keeps booker's ordering.
     #
-    # deliberately no --multi. picking a bookmark is a one-at-a-time thing, and
-    # under --multi fzf reads tab as "mark this and move down" - the one key
-    # booker's own completion trained everybody to press here. a couple of taps
-    # to scroll would silently mark a handful of bookmarks and open all of them
-    # on the next return.
+    # deliberately no --multi: under it fzf reads tab as "mark this and move
+    # down" - the one key booker's own completion trained everybody to press -
+    # so a couple of taps to scroll would mark bookmarks silently and open them
+    # all on the next return.
     #
-    # a plain array literal rather than %w[]: the delimiter is a real tab and
-    # the prompt ends in a space, and neither survives %w[]
+    # a plain array literal, not %w[]: neither the real tab in the delimiter nor
+    # the prompt's trailing space survives %w[]
     DEFAULT = [
       "fzf",
       "--height=40%",
@@ -88,11 +83,10 @@ module Booker
 
       def executable?(path) = File.executable?(path) && !File.directory?(path)
 
-      # hand the finder its candidates and get back the id of what was picked,
-      # or nil for every other outcome - cancelled, nothing matched, or no
-      # usable finder. one id and not a list: picking a bookmark is a
-      # one-at-a-time thing, and dropping --multi above only covers the default
-      # finder, not one named in ~/.booker.yml
+      # candidates in, the id of what was picked out - or nil for every other
+      # outcome: cancelled, nothing matched, no usable finder. one id and not a
+      # list, since dropping --multi above only covers the default finder and
+      # not one named in ~/.booker.yml
       def select(lines)
         argv = command
         return nil if argv.nil?
@@ -120,10 +114,9 @@ module Booker
       def resolve_command
         configured = Config.default.picker
 
-        # yaml reads a bare `:picker: false` as the boolean, and anyone writing
-        # that means "leave the picker off" - without this it would look like
-        # nothing was configured at all and quietly start fzf instead. a blank
-        # setting is the same request, and would leave nothing to look up
+        # yaml reads a bare `:picker: false` as the boolean, and that means
+        # "leave the picker off" - otherwise it looks like nothing was
+        # configured and quietly starts fzf instead. blank says the same thing
         return nil if configured == false
 
         argv = configured ? Shellwords.split(configured.to_s) : DEFAULT

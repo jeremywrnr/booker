@@ -178,9 +178,8 @@ RSpec.describe "argument dispatch" do
 
   # a browser that will not start is the one failure booker cannot do anything
   # about, so it says so rather than reporting the url as opened. both halves
-  # are here on purpose: the suite's stub browser succeeds everywhere, and a
-  # branch covered only by whichever os happens to lack the stubbed binary is
-  # not covered at all
+  # are here because the suite's stub browser succeeds everywhere, and a branch
+  # covered only by whichever os lacks the stubbed binary is not covered at all
   describe "#openweb when the browser will not start" do
     # #openweb execs the browser directly rather than through a shell, so this
     # has to be one binary and not a command line. `false` exits 1 and ignores

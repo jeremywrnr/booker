@@ -1,12 +1,10 @@
 # frozen_string_literal: true
 
-# specs for Booker::Picker: handing candidate lines to an external finder and
-# reading back what was chosen.
-#
-# the finder is stubbed with coreutils rather than with a double, so these
-# exercise the real IO.popen path - the pipe, the exit status, and the broken
+# specs for Booker::Picker: candidate lines out to an external finder, the
+# chosen one back. the finder is coreutils rather than a double, so these
+# exercise the real IO.popen path - the pipe, the exit status and the broken
 # pipe when the child leaves early are the whole of what this class does, and a
-# double would test none of them. fzf itself is never needed, here or on ci.
+# double would test none of them. fzf is never needed, here or on ci.
 
 RSpec.describe Booker::Picker do
   # ids deliberately unlike the titles, so a selection can only be right by

@@ -23,15 +23,14 @@ require "json"
 require "tmpdir"
 require "stringio"
 
-# dont actually open links while testing, just ignore. keep the real
-# implementation around under another name so the #browse specs can still
-# exercise it - this override is permanent once the suite loads
+# dont actually open links while testing. the real implementation stays under
+# another name so the #browse specs can still reach it; this override is
+# permanent once the suite loads.
 #
-# resolved through PATH rather than named absolutely: macOS keeps true in
-# /usr/bin and has no /bin/true at all, so an absolute path here stands for a
-# browser that opened the url on one platform and a browser that could not be
-# found on the other. that difference is invisible - #openweb only warns - and
-# it silently moved the coverage of its failure branch from one os to the other
+# resolved through PATH rather than named absolutely: macOS has no /bin/true at
+# all, so an absolute path would mean "browser opened the url" on one platform
+# and "browser not found" on the other - invisible, since #openweb only warns,
+# and it moved coverage of that failure branch from one os to the other
 module Booker::Browser
   alias_method :real_browse, :browse
 
@@ -82,14 +81,10 @@ RSpec.configure do |config|
   # groups say RSpec.describe instead
   config.disable_monkey_patching!
 
-  # booker prints constantly and the suite drives its cli directly, so the
-  # noise has to go somewhere. per example rather than per file: the redirect
-  # is torn down before rspec reports, so a failure still prints its own
-  # message, and `capture_stdout` / the `output` matcher nest inside this
-  # the suite is already safe by construction - the redirect below hands $stdout
-  # a File on /dev/null, and capture_stdout hands it a StringIO, neither of
-  # which is a terminal - but saying so keeps a future change to that redirect
-  # from quietly arming the picker halfway through the suite
+  # already safe by construction - the redirect below hands $stdout a File on
+  # /dev/null and capture_stdout hands it a StringIO, neither a terminal - but
+  # saying so keeps a future change to that redirect from quietly arming the
+  # picker halfway through the suite
   config.before(:each) { Booker::Picker.enabled = false }
 
   # booker memoizes what it only needs to work out once per run - the config,
@@ -108,12 +103,10 @@ RSpec.configure do |config|
     $stderr = File.open(File::NULL, "w")
     begin
       example.run
-      # rspec deliberately lets SystemExit through, so an example that reaches
-      # #pexit without wrapping it in an expectation ends the whole run where it
-      # stands. every later example is silently skipped and the summary counts
-      # only the ones that got to run, so it reads as a passing suite that
-      # exited 1 - a long way from the real cause. name it, and fail the one
-      # example that actually did it instead
+      # rspec deliberately lets SystemExit through, so an example reaching
+      # #pexit unwrapped ends the whole run where it stands: later examples are
+      # silently skipped and it reads as a passing suite that exited 1. name it,
+      # and fail the one example that did it
     rescue SystemExit => e
       raise "example called exit(#{e.status}) outside an expectation - if that " \
             "is the behavior under test, wrap it in `expect { }.to raise_error" \

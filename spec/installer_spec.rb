@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
-# specs for Booker::Installer: completion, config and bookmark discovery
-#
-# required explicitly: the installer is reachable only through --install, so
-# lib/booker leaves it for CLI#installer to load rather than paying for it on
-# every search and every tab press
+# specs for Booker::Installer: completion, config and bookmark discovery.
+# required explicitly - lib/booker leaves the installer for CLI#installer to
+# load, rather than paying for it on every search and every tab press
 require_relative "../lib/booker/installer"
 
 RSpec.describe "shell completion" do
@@ -41,15 +39,12 @@ RSpec.describe "shell completion" do
   end
 
   describe "installing into a clean home" do
-    # the one place booker shells out here is `zsh -c 'echo $fpath'`, and it
-    # treats a missing zsh as fatal - so an unstubbed call does not just fail an
-    # example, it exits the process and takes the rest of the suite with it.
-    # pinned for the whole block rather than per example: ubuntu ships no zsh at
-    # all, and a developer whose $fpath happens to hold a writable dir would
-    # otherwise skip the ~/.zsh/completion branch the specs below describe.
-    # entries deliberately outside the temp HOME, so the install falls through
-    # to creating ~/.zsh/completion - which zsh only reads once ~/.zshrc puts it
-    # on $fpath, hence the rc file edits further down
+    # booker treats a missing zsh as fatal, so an unstubbed `zsh -c 'echo
+    # $fpath'` does not just fail an example - it exits the process and takes
+    # the rest of the suite with it. pinned for the whole block, since ubuntu
+    # ships no zsh and a developer with a writable $fpath dir would otherwise
+    # skip the branch these specs describe. the entries sit outside the temp
+    # HOME on purpose, so the install falls through to ~/.zsh/completion
     before do
       allow(Open3).to receive(:capture3)
         .with("zsh", "-c", "echo $fpath")

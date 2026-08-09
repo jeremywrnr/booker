@@ -6,10 +6,10 @@
 require "io/console"
 
 module Booker
-  # int number of columns on screen. io/console answers from this process, so
-  # there is no `tput cols` subshell to pay for on every run. it reads /dev/tty
-  # rather than stdout, so a width still comes back through a pipe, and it
-  # returns nil when there is no terminal at all - a completion subshell, or ci
+  # int number of columns on screen, answered in process rather than by a `tput
+  # cols` subshell on every run. io/console reads /dev/tty rather than stdout,
+  # so a width still comes back through a pipe, and nil when there is no
+  # terminal at all - a completion subshell, or ci
   module Term
     def self.width
       @width ||= IO.console&.winsize&.last&.nonzero? ||
@@ -21,10 +21,9 @@ module Booker
   # compl. color codes space
   CODEWIDTH = 16
 
-  # print a message and stop. shared by the cli and the installer, both of which
-  # report a failure and exit in the same breath. the message goes to stderr:
-  # every caller is reporting a failure, and stdout is a data channel for the
-  # completion scripts
+  # print a message and stop, for the cli and the installer both reporting a
+  # failure and exiting in one breath. stderr, not stdout: stdout is the data
+  # channel the completion scripts read
   module Output
     def pexit(msg, sig = 1)
       warn msg
@@ -32,10 +31,9 @@ module Booker
     end
   end
 
-  # Colors and windowing still read as "Success: ".grn at every call site, but
-  # as a refinement rather than an open class: a gem that claims String#red for
-  # the whole process is taking a name it does not own. Files that want these
-  # say `using Booker::Colors` at the top, and nothing outside booker sees them.
+  # "Success: ".grn at every call site, but as a refinement rather than an open
+  # class: a gem claiming String#red for the whole process is taking a name it
+  # does not own. files that want these say `using Booker::Colors` at the top
   module Colors
     CODES = {red: 31, grn: 32, yel: 33, blu: 34, cyan: 36}.freeze
 
