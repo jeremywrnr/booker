@@ -1,0 +1,14 @@
+version: 2
+
+updates:
+  # the gemspec pins with ~>, so these arrive as small, reviewable bumps
+  - package-ecosystem: bundler
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  # ci pins actions by major version; this catches the majors
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

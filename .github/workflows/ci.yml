@@ -6,22 +6,47 @@ on:
   pull_request:
     branches: [main]
 
+# nothing here writes anything back, so the token gets read access and no more.
+# without this it inherits whatever the repository default is, which is write
+permissions:
+  contents: read
+
+# a second push while the first is still running makes the first answer stale,
+# so cancel it. keyed per ref rather than globally: two open pull requests are
+# separate questions. main is exempt - its runs are the record of what merged,
+# and cancelling one would leave a commit with no result against it
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
 
+    # the suite is a few seconds; anything near this is hung rather than slow,
+    # and the default six hour ceiling would sit there burning minutes
+    timeout-minutes: 10
+
     strategy:
+      # one ruby failing should not hide whether the others do, and the whole
+      # matrix finishes inside a minute anyway
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
         ruby-version: ["3.2", "3.3", "3.4", "4.0"]
         include:
+          # newest ruby on linux is the primary job: it also measures coverage
+          # and lints. a key added to a combination that already exists merges
+          # into it rather than adding a job, so this stays four linux jobs
+          - os: ubuntu-latest
+            ruby-version: "4.0"
+            primary: true
           # booker reads macOS paths (Safari plist, open) - check there too
           - os: macos-latest
             ruby-version: "4.0"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -30,21 +55,27 @@ jobs:
           bundler-cache: true
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
 
       - name: Run tests
-        if: matrix.ruby-version != '4.0' || matrix.os != 'ubuntu-latest'
+        if: ${{ !matrix.primary }}
         run: just spec
 
       # the primary job runs the same recipe you run before pushing
       - name: Run full check (coverage, lint)
-        if: matrix.ruby-version == '4.0' && matrix.os == 'ubuntu-latest'
+        if: ${{ matrix.primary }}
         run: just ci
+
+      # the gemspec is only exercised at release time otherwise, which is the
+      # worst moment to find out a file glob or a metadata key is wrong
+      - name: Build the gem
+        if: ${{ matrix.primary }}
+        run: gem build booker.gemspec
 
       # uploaded even when the check fails, since that is when you want to read it
       - name: Upload coverage
-        if: ${{ !cancelled() && matrix.ruby-version == '4.0' && matrix.os == 'ubuntu-latest' }}
-        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && matrix.primary }}
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/

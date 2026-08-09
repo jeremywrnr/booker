@@ -2,7 +2,7 @@
 
 # Variables
 gem_name := "booker"
-version := `ruby -r./lib/booker.rb -e 'puts Booker.version'`
+version := `ruby -r./lib/booker/version.rb -e 'puts Booker::VERSION'`
 
 # List all available recipes
 list:
@@ -28,13 +28,32 @@ cov:
 cov-html: cov
     open coverage/index.html
 
+# Build the github pages site into site/ (readme + the coverage report)
+docs: cov
+    bundle exec ruby docs/build.rb
+
+# Open the built site
+docs-open: docs
+    open site/index.html
+
 # Everything CI checks: tests with coverage, then lint
 ci: cov lint
 
-# Build and install the gem
+# The completion scripts are copied into $fpath at install time, so a fresh gem
+# on its own leaves the old ones sitting on disk. 'completion' rather than a
+# bare --install: the latter also regenerates the config and prompts for a
+# bookmarks source, neither of which belongs in a build.
+#
+# just takes the last comment line as the recipe's description, so the summary
+# goes here rather than above the rationale
+# Build and install the gem, refreshing shell completions with it
 build:
     gem build {{gem_name}}.gemspec
     gem install {{gem_name}}-{{version}}.gem
+    booker --install completion
+    @echo ""
+    @echo "new shells are ready. zsh keeps _booker for the life of a session,"
+    @echo "so to pick it up in THIS one:  unfunction _booker && autoload -U _booker"
 
 # Clean up gem files
 clean:

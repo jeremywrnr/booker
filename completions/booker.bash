@@ -18,16 +18,20 @@ _booker() {
     # flags complete against the option list, not against bookmarks
     if [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "-b --bookmark -i --install -s --search \
-            -c --complete -v --version -h --help" -- "$cur"))
+            -l --list -c --complete --complete-raw -v --version -h --help" -- "$cur"))
         return 0
     fi
 
-    # everything typed so far, minus the command name, flags, and any
-    # already-selected bookmark ids
+    # everything typed so far, minus the command name, flags, any URL already
+    # completed onto the line, and any bookmark id typed by hand
     for arg in "${COMP_WORDS[@]:1}"; do
         [[ -z "$arg" ]] && continue
         [[ "$arg" == -* ]] && continue
-        [[ "$arg" =~ ^[0-9_]+$ ]] && continue
+        # completion inserts URLs, so a scheme marks a previous pick rather
+        # than something to search for
+        [[ "$arg" == *://* ]] && continue
+        # mirrors BOOKMARK_ID in lib/booker/cli.rb: safari ids are uuids
+        [[ "$arg" =~ ^([0-9]+_[a-zA-Z0-9-]+|[0-9_]+)$ ]] && continue
         search_terms+=("$arg")
     done
 

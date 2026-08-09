@@ -1,0 +1,226 @@
+# frozen_string_literal: true
+
+# parse booker's command line args and act on them
+
+require_relative "output"
+
+using Booker::Colors
+
+module Booker
+  class CLI
+    include Browser
+    include Output
+
+    # a bookmark id is "<source index>_<browser id>". safari uses a uuid where
+    # chrome and firefox number theirs, so the second half is anything id-shaped
+    # rather than digits; bare digits stay valid for single-source configs
+    # written before the prefix existed. completion inserts urls now, but ids
+    # are still first class - --bookmark takes them, the picker returns them
+    BOOKMARK_ID = /\A(?:\d+_[a-z0-9-]+|[0-9_]+)\z/i
+
+    def initialize(args)
+      parse args
+    end
+
+    def parse(args)
+      show_bookmarks if args.none?
+
+      if args.first&.start_with?("-")
+        dispatch_option(args)
+        exit 0
+      end
+
+      bookmark_ids, other_args = args.partition { |a| BOOKMARK_ID.match?(a) }
+      open_bookmark(bookmark_ids) unless bookmark_ids.empty?
+
+      unless other_args.empty?
+        # every argument being a url means they all came from tab completion,
+        # which inserts one per bookmark - open the lot. one non-url word makes
+        # the whole line a search, so a phrase containing a domain still is one
+        if other_args.all? { |arg| domain.match?(arg) }
+          other_args.each do |site|
+            puts "opening website: ".grn + site
+            openweb(prep(site))
+          end
+        else
+          pick_or_search(other_args.join(" ").strip)
+        end
+      end
+    end
+
+    def option_parser
+      # required here rather than at the top of the file: optparse is only
+      # reachable through an argument starting with "-", so `booker <term>` and
+      # every tab press paid to load it without ever building one
+      require "optparse"
+
+      @option_parser ||= OptionParser.new do |opts|
+        opts.banner = "Usage: booker [options] [arguments]"
+        opts.separator ""
+        opts.separator "Main options:"
+        opts.on("-b", "--bookmark", "explicitly open bookmark") { @mode = :bookmark }
+        opts.on("-i", "--install", "install: all|bookmarks|completion|config|safari") { @mode = :install }
+        opts.on("-s", "--search", "explicitly search arguments") { @mode = :search }
+        opts.on("-l", "--list", "print the bookmark table, skipping the picker") { @mode = :list }
+        opts.separator ""
+        opts.separator "Other options:"
+        opts.on("-c", "--complete", "show tab completions") { @mode = :complete }
+        opts.on("--complete-raw", "tab completions, tab separated (for shell scripts)") { @mode = :complete_raw }
+        opts.on("-v", "--version", "print version") {
+          puts VERSION
+          exit 0
+        }
+        opts.on_tail("-h", "--help", "show help") {
+          puts opts
+          exit 0
+        }
+      end
+    end
+
+    def dispatch_option(args)
+      option_parser.parse!(args)
+
+      case @mode
+      when :bookmark
+        pexit "Error: ".red + "booker --bookmark expects bookmark id" if args.empty?
+        open_bookmark(args)
+      when :install
+        installer.install(args.empty? ? %w[completion config bookmarks] : args)
+      when :search
+        pexit "Error: ".red + "--search requires an argument" if args.empty?
+        open_search(args.join(" "))
+      when :list
+        # `booker --list github` narrows the table, rather than silently
+        # dropping the term and printing everything
+        show_bookmarks(args.join(" "), force_table: true)
+      when :complete
+        Bookmarks.new(args.join(" ")).autocomplete
+      when :complete_raw
+        Bookmarks.new(args.join(" ")).autocomplete_raw
+      end
+    rescue OptionParser::InvalidOption => e
+      pexit "Error: ".red + e.message
+    end
+
+    def installer
+      # the installer pulls in find, fileutils and open3 and is reachable only
+      # through --install, so a plain search - and every completion subshell -
+      # loaded all of it to never call any of it
+      require_relative "installer"
+
+      @installer ||= Installer.new
+    end
+
+    def openweb(url)
+      # Pass URL directly to browser without invoking shell
+      # This avoids issues with special characters like parentheses
+      browser_cmd = browse.strip
+
+      # Redirect stdout/stderr to suppress GTK warnings
+      success = system(browser_cmd, url, out: File::NULL, err: File::NULL)
+
+      unless success
+        # system reports a missing binary as nil rather than false, but the
+        # forked child still exited - with 127, the shell convention for execvp
+        # failures - so there is a status either way. the &. is only for nothing
+        # in this process having spawned a child yet
+        code = Process.last_status&.exitstatus
+        puts "Warning: ".yel + "Failed to open URL (exit code: #{code})"
+      end
+    end
+
+    # bookmark ids, opened in order. parsing every source costs hundreds of
+    # milliseconds, so a caller that already has the set - the picker does -
+    # passes it in, and it is searched once for the list rather than once per id
+    def open_bookmark(bm, store = nil)
+      store ||= Bookmarks.new
+
+      bm.each do |id|
+        url = store.bookmark_url(id)
+        pexit "Failure:".red + " bookmark #{id} not found" if url.nil?
+        puts "opening bookmark ".grn + url
+        openweb(url)  # no shell quoting needed - system() handles it
+      end
+    end
+
+    def open_search(term)
+      puts "searching ".grn + term
+      search = Config.default.searcher
+      term = term.tr(" ", "+")
+      openweb(search + term)  # No shell escape needed - it's a URL
+    end
+
+    # a term matching bookmarks is offered as a choice; one matching nothing is
+    # a search, exactly as it always was. cancelling the picker is a decision
+    # rather than a fallthrough, and `booker -s <term>` still demands a search
+    def pick_or_search(term)
+      if Picker.enabled?
+        bookmarks = Bookmarks.new(term)
+        pick_and_open(bookmarks) unless bookmarks.allurls.empty?
+      end
+
+      open_search(term)
+    end
+
+    # offer the bookmarks as a choice and open what comes back. either way this
+    # ends the run: cancelling the picker is a decision, not a fallthrough to
+    # whatever the caller would have done instead
+    def pick_and_open(bookmarks)
+      id = Picker.select(bookmarks.rows)
+      exit 0 if id.nil?
+      open_bookmark([id], bookmarks)
+      exit 0
+    end
+
+    def show_bookmarks(term = "", force_table: false)
+      bookmarks = Bookmarks.new(term)
+      allurls = bookmarks.allurls
+
+      if allurls.empty?
+        puts "No bookmarks found.".red
+        puts "Run: ".yel + "booker --install bookmarks".cyan
+        exit 0
+      end
+
+      # the picker owns the screen when there is one, so nothing is printed
+      # above it. --list forces the table back for anyone who wants it
+      pick_and_open(bookmarks) if !force_table && Picker.enabled?
+
+      puts "Bookmarks:".grn + " (usage: booker <id> or booker <search>)"
+      puts ""
+
+      widths = column_widths
+      allurls.each { |bookmark| puts row(bookmark, widths) }
+
+      puts ""
+      puts "Found #{allurls.length} bookmarks".grn
+      puts ""
+      puts "Examples:".yel
+      puts "  #{"booker #{allurls.first.id}".ljust(20).cyan}  # Open first bookmark"
+      puts "  #{"booker github".ljust(20).cyan}  # Search bookmarks for 'github'"
+      puts "  #{"booker --help".ljust(20).cyan}  # Show help"
+
+      exit 0
+    end
+
+    # what is left of the terminal once the id column and the single spaces
+    # between columns are spoken for, shared out by proportion with a floor
+    # apiece so a narrow window still shows something of every field
+    ID_WIDTH = 10
+    SHARES = {folder: [0.20, 15], title: [0.30, 20], url: [0.50, 30]}.freeze
+
+    def column_widths
+      remaining = Term.width - ID_WIDTH - 3
+      SHARES.transform_values { |share, floor| (remaining * share).clamp(floor..).to_i }
+    end
+
+    def row(bookmark, widths)
+      [
+        bookmark.id.to_s.window(ID_WIDTH).grn,
+        bookmark.display_folder.window(widths[:folder]).blu,
+        bookmark.title.window(widths[:title]).yel,
+        bookmark.url.window(widths[:url])
+      ].join(" ")
+    end
+  end
+end

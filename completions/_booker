@@ -11,9 +11,14 @@ _booker_bookmarks() {
     local -a bookmarks sites search_terms
     search_terms=()
 
-    #filter out 'booker', flags, and already-selected bookmark IDs
+    #filter out 'booker', flags, already-completed URLs, and bookmark IDs typed
+    #by hand. completion inserts URLs, so anything carrying a scheme is a
+    #previous pick rather than a search term. the id pattern mirrors
+    #BOOKMARK_ID in lib/booker/cli.rb, which is the source of truth - safari
+    #ids are uuids, so digits alone do not cover them
     for arg in "$@"; do
-        if [[ "$arg" != "booker" && "$arg" != -* && ! "$arg" =~ ^[0-9_]+$ ]]; then
+        if [[ "$arg" != "booker" && "$arg" != -* && "$arg" != *://* \
+              && ! "$arg" =~ ^([0-9]+_[a-zA-Z0-9-]+|[0-9_]+)$ ]]; then
             search_terms+=("$arg")
         fi
     done
@@ -28,18 +33,50 @@ _booker_bookmarks() {
     BLUE=`echo -e "\033[4;34m"`
     RESET=`echo -e "\033[0;0m"`
 
-    #parse parts, color. the p flag makes zsh read \t as a real tab
-    local -a ids links
+    #parse parts, color. the p flag makes zsh read \t as a real tab.
+    #
+    #every description has to fit on one screen line. -l below prints one match
+    #per line and zsh sizes the list on that basis, so a description that wraps
+    #makes the geometry wrong by however many lines it spilled onto - the menu
+    #then redraws over itself and over the scrollback above it. browsers happily
+    #store a whole page blurb as a title, so this is not a rare case: only the
+    #display is trimmed, and `urls` keeps the full link that actually gets
+    #inserted
+    #the colour escapes below are characters zsh counts when it sizes the list
+    #but the terminal draws as nothing, so the budget has to leave room for
+    #them (13) on top of a margin. erring small only trims a title slightly
+    #early; erring large puts the wrapping back
+    local -i width=$(( ${COLUMNS:-100} - 16 ))
+    (( width < 40 )) && width=40
+    local -a urls links
     for bookmark in ${bookmarks[@]}; do
         local -a split
         split=("${(@ps:\t:)bookmark}")
-        ids+=( $split[1] )
-        links+=("$split[2] $BLUE$split[3]$RESET")
+        urls+=( $split[3] )
+
+        #the url is the useful half, but cap it so one long link cannot crowd
+        #the title out entirely
+        local name=$split[2] link=$split[3]
+        local -i maxlink=$(( width / 2 ))
+        (( ${#link} > maxlink )) && link="${link[1,maxlink-1]}…"
+
+        local -i room=$(( width - ${#link} - 1 ))
+        (( room < 20 )) && room=20
+        (( ${#name} > room )) && name="${name[1,room-1]}…"
+
+        links+=("$name $BLUE$link$RESET")
     done
 
-    #finally, add completions
+    #finally, add completions. the inserted value is the URL rather than the
+    #bookmark id: the id was opaque on the command line, and booker opens a URL
+    #argument directly, so both land in the same place. no -Q, so zsh quotes the
+    #query strings and fragments that URLs are full of.
+    #
+    #'list force' keeps the list on screen even when a single bookmark matches,
+    #so you can still read the folder and title of what is about to be inserted
     compstate[insert]=menu
-    compadd -U -l -X 'found bookmarks:' -d links -a ids
+    compstate[list]='list force'
+    compadd -U -l -X 'found bookmarks:' -d links -a urls
 }
 
 
@@ -53,6 +90,9 @@ _booker() {
         '(--bookmark)--bookmark[do bookmark completion]'\
         '(-c)-c[show bookmark completions]'\
         '(--complete)--complete[show bookmark completions]'\
+        '(--complete-raw)--complete-raw[tab completions, tab separated]'\
+        '(-l)-l[print the bookmark table, skipping the picker]'\
+        '(--list)--list[print the bookmark table, skipping the picker]'\
         '(-i)-i[perform installations (all, bookmarks, completion, config, safari)]'\
         '(--install)--install[perform installations (all, bookmarks, completion, config, safari)]'\
         '(-s)-s[search google for...]'\

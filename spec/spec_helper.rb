@@ -1,13 +1,18 @@
+# frozen_string_literal: true
+
 # Coverage must start before booker is loaded, or its lines go untracked.
 # Opt-in via COVERAGE=1 so a plain `just spec` stays fast: `just cov`
 if ENV["COVERAGE"]
   require "simplecov"
   SimpleCov.start do
-    add_filter "/spec/"
-    # Coverage is platform dependent: some safari/plutil/open paths only run on
-    # a mac, so linux reports a little under what a mac does. The floor has to
-    # clear the lower of the two, since CI measures coverage on linux.
-    minimum_coverage line: 70
+    # simplecov 1.0's default test_frameworks profile already skips /spec/, but
+    # say it anyway - the floor below is only meaningful if the denominator is
+    # lib/, and that should not rest on a default profile staying put
+    skip "/spec/"
+    # Every platform specific path - safari/plutil, open, the darwin checks - is
+    # stubbed rather than shelled out to, so mac and linux report the same
+    # number and the floor can sit at the top. CI measures coverage on linux.
+    minimum_coverage line: 100
   end
 end
 
@@ -16,26 +21,101 @@ require "rubygems"
 require "rspec"
 require "json"
 require "tmpdir"
+require "stringio"
 
-# Redirect stderr and stdout while testing
-SILENT = true
-if SILENT
-  RSpec.configure do |config|
-    original_stderr = $stderr
+# dont actually open links while testing. the real implementation stays under
+# another name so the #browse specs can still reach it; this override is
+# permanent once the suite loads.
+#
+# resolved through PATH rather than named absolutely: macOS has no /bin/true at
+# all, so an absolute path would mean "browser opened the url" on one platform
+# and "browser not found" on the other - invisible, since #openweb only warns,
+# and it moved coverage of that failure branch from one os to the other
+module Booker::Browser
+  alias_method :real_browse, :browse
+
+  def browse
+    "true "
+  end
+end
+
+# fixtures live next to the specs; every spec that needs one goes through here
+# so the paths stay in one place
+def fixture_path(name)
+  File.join(__dir__, "fixtures", name)
+end
+
+# Helper for capturing stdout
+def capture_stdout
+  old_stdout = $stdout
+  $stdout = StringIO.new
+  yield
+  $stdout.string
+ensure
+  $stdout = old_stdout
+end
+
+# run a block that is expected to exit. SystemExit is not a StandardError, so
+# one escaping an example aborts rspec itself and every example after it is
+# silently never run. use this when asserting on output; use the exit_with_code
+# matcher below when the status is what matters
+def catch_exit
+  yield
+rescue SystemExit
+  nil
+end
+
+# diagnostics go to stderr, so that a warning raised while parsing can never
+# land in the middle of the --complete-raw feed the shell scripts read
+def capture_stderr
+  old_stderr = $stderr
+  $stderr = StringIO.new
+  yield
+  $stderr.string
+ensure
+  $stderr = old_stderr
+end
+
+RSpec.configure do |config|
+  # no `should`, and no describe/it on every object in the process - example
+  # groups say RSpec.describe instead
+  config.disable_monkey_patching!
+
+  # already safe by construction - the redirect below hands $stdout a File on
+  # /dev/null and capture_stdout hands it a StringIO, neither a terminal - but
+  # saying so keeps a future change to that redirect from quietly arming the
+  # picker halfway through the suite
+  config.before(:each) { Booker::Picker.enabled = false }
+
+  # booker memoizes what it only needs to work out once per run - the config,
+  # the resolved picker command, whether firefox is running. a process-lifetime
+  # memo is a suite-lifetime memo, so every example starts from a clean one
+  config.after(:each) do
+    Booker::Picker.reset!
+    Booker::Config.reset!
+    Booker::Parsers::Firefox.reset!
+  end
+
+  config.around(:each) do |example|
     original_stdout = $stdout
-    config.before(:all) do
-      $stderr = File.open(File::NULL, "w")
-      $stdout = File.open(File::NULL, "w")
-    end
-
-    config.after(:all) do
-      $stderr = original_stderr
+    original_stderr = $stderr
+    $stdout = File.open(File::NULL, "w")
+    $stderr = File.open(File::NULL, "w")
+    begin
+      example.run
+      # rspec deliberately lets SystemExit through, so an example reaching
+      # #pexit unwrapped ends the whole run where it stands: later examples are
+      # silently skipped and it reads as a passing suite that exited 1. name it,
+      # and fail the one example that did it
+    rescue SystemExit => e
+      raise "example called exit(#{e.status}) outside an expectation - if that " \
+            "is the behavior under test, wrap it in `expect { }.to raise_error" \
+            "(SystemExit)` or the `exit_with_code` matcher"
+    ensure
+      $stdout.close
+      $stderr.close
       $stdout = original_stdout
-    end
-
-    # allow old and new RSPEC syntax
-    config.expect_with(:rspec) do |c|
-      c.syntax = [:should, :expect]
+      $stderr = original_stderr
     end
   end
 end
@@ -59,9 +139,9 @@ RSpec::Matchers.define :exit_with_code do |code|
       (actual.nil? ? " not called" : "(#{actual}) was called")
   end
   failure_message_when_negated do |block|
-    "expected block not to call exit(#{exp_code})"
+    "expected block not to call exit(#{code})"
   end
   description do
-    "expect block to call exit(#{exp_code})"
+    "expect block to call exit(#{code})"
   end
 end
