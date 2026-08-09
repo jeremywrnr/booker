@@ -1,7 +1,6 @@
 # :bookmark: booker
 
 [![CI](https://github.com/jeremywrnr/booker/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremywrnr/booker/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fjeremywrnr.com%2Fbooker%2Fbadge-coverage.json)](https://jeremywrnr.com/booker/coverage/)
 [![Gem](https://img.shields.io/gem/v/booker)](https://rubygems.org/gems/booker)
 [![MIT](https://img.shields.io/badge/license-MIT-blue)](http://jeremywrnr.com/mit-license)
 
