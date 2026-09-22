@@ -43,7 +43,7 @@ Gem::Specification.new do |g|
 
   g.required_ruby_version = ">= 3.2"
 
-  g.add_dependency "json", "~> 2.21"
+  g.add_dependency "json", ">= 2.21", "< 4.0"
   g.add_dependency "sqlite3", "~> 2.9", ">= 2.9.5"
   g.add_dependency "rexml", "~> 3.4"
 
