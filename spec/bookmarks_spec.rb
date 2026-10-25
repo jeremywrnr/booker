@@ -55,6 +55,12 @@ RSpec.describe Booker::Bookmarks do
       expect(url).to match(/^(https?|chrome):\/\//)
     end
 
+    # ids from before the source prefix, for `booker --bookmark 123`
+    it "resolves a bare id against the first source" do
+      bare = @bm.allurls.first.id.delete_prefix("0_")
+      expect(@bm.bookmark_url(bare)).to eq(@bm.allurls.first.url)
+    end
+
     it "should return nil for invalid ID" do
       url = @bm.bookmark_url("99999_nonexistent")
       # The method returns nil implicitly when no match found

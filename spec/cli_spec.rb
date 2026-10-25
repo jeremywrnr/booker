@@ -50,8 +50,6 @@ RSpec.describe Booker::CLI do
     end
   end
 
-  # "testing 123" is deliberately not here: a numeric argument is a bookmark
-  # id, not a search term, which the "separate bookmark IDs" spec below covers
   it "should search when given string arguments" do
     ["hi", "mic check mic-check"].each do |str|
       expect { run!(str) }.to output(/searching.*#{Regexp.escape(str)}/m).to_stdout
@@ -60,37 +58,55 @@ RSpec.describe Booker::CLI do
 
   it "should handle multiple bookmark IDs" do
     # Mock the bookmarks to avoid actual file reading
-    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("1").and_return("http://example1.com")
-    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("2").and_return("http://example2.com")
+    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("0_1").and_return("http://example1.com")
+    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("0_2").and_return("http://example2.com")
 
-    expect { run!("1 2") }.to output(/opening bookmark.*example1.*opening bookmark.*example2/m).to_stdout
+    expect { run!("0_1 0_2") }.to output(/opening bookmark.*example1.*opening bookmark.*example2/m).to_stdout
+  end
+
+  # no id has been a bare number since ids carried their source, and a year
+  # is a perfectly ordinary thing to search for
+  it "searches for a bare number rather than opening it as an id" do
+    expect { run!("2024") }.to output(/searching.*2024/m).to_stdout
+  end
+
+  it "encodes the search term, so + & and # reach the engine intact" do
+    allow_any_instance_of(Booker::Config).to receive(:searcher).and_return("https://s.example/?q=")
+    expect_any_instance_of(Booker::CLI).to receive(:openweb).with("https://s.example/?q=c%2B%2B+a%26b+%23x")
+    capture_stdout { run!("-s c++ a&b #x") }
+  end
+
+  # NeedlessArgument, not InvalidOption - it used to escape as a backtrace
+  it "reports an option given a value it does not take" do
+    expect { run!("--list=github") }.to output(/Error: .*needless argument/).to_stderr
+    expect(runblock("--list=github")).to exit_with_code 1
   end
 
   it "should separate bookmark IDs from search terms" do
-    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("123").and_return("http://example.com")
+    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("0_123").and_return("http://example.com")
 
-    # Should open bookmark 123 and search for "github"
-    expect { run!("123 github") }.to output(/opening bookmark.*example.*searching.*github/m).to_stdout
+    # Should open bookmark 0_123 and search for "github"
+    expect { run!("0_123 github") }.to output(/opening bookmark.*example.*searching.*github/m).to_stdout
   end
 
   it "should handle URLs with special shell characters" do
     # Test URL with parentheses, ampersands, and other shell metacharacters
     special_url = "https://example.com/path?query=(test)&foo=bar#section"
-    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("999").and_return(special_url)
+    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("0_999").and_return(special_url)
 
     # Should open without shell errors
-    expect { run!("999") }.to output(/opening bookmark.*example\.com/m).to_stdout
-    expect { run!("999") }.not_to output(/Syntax error|unexpected/m).to_stdout
+    expect { run!("0_999") }.to output(/opening bookmark.*example\.com/m).to_stdout
+    expect { run!("0_999") }.not_to output(/Syntax error|unexpected/m).to_stdout
   end
 
   it "should handle URLs with parentheses like Gmail filters" do
     # Real-world example: Gmail with filter syntax
     gmail_url = "https://mail.google.com/mail/u/0/#section_query/(in%3Ainbox+OR+label%3A%5Eiim)+is%3Aunread"
-    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("971").and_return(gmail_url)
+    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("0_971").and_return(gmail_url)
 
     # Should open without shell errors
-    expect { run!("971") }.to output(/opening bookmark.*mail\.google\.com/m).to_stdout
-    expect { run!("971") }.not_to output(/Syntax error|unexpected/m).to_stdout
+    expect { run!("0_971") }.to output(/opening bookmark.*mail\.google\.com/m).to_stdout
+    expect { run!("0_971") }.not_to output(/Syntax error|unexpected/m).to_stdout
   end
 end
 

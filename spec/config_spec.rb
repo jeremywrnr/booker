@@ -243,6 +243,19 @@ RSpec.describe "Booker::Config file handling" do
     end
   end
 
+  # `searcher:` is plain yaml; booker's own #write emits `:searcher:`
+  it "reads a config written with plain string keys" do
+    Dir.mktmpdir do |tmp|
+      target = File.join(tmp, ".booker.yml")
+      File.write(target, "searcher: https://duckduckgo.com/?q=\nbookmarks: /a\n")
+      stub_const("Booker::Config::YAMLCONF", target)
+
+      config = Booker::Config.new
+      expect(config.searcher).to eq("https://duckduckgo.com/?q=")
+      expect(config.bookmarks).to eq(["/a"])
+    end
+  end
+
   it "writes updated keys back out as yaml" do
     Dir.mktmpdir do |tmp|
       target = File.join(tmp, ".booker.yml")

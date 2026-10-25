@@ -55,6 +55,29 @@ RSpec.describe Booker::Parsers::Base do
       expect(results).not_to be_empty
     end
 
+    # chrome files anything saved without choosing a folder under "other"
+    it "reads every root, not just the bookmarks bar" do
+      Dir.mktmpdir do |tmp|
+        path = File.join(tmp, "Bookmarks")
+        link = ->(id, url) { {"type" => "url", "id" => id, "name" => "n#{id}", "url" => url} }
+        File.write(path, JSON.generate("roots" => {
+          "bookmark_bar" => {"name" => "Bookmarks bar", "children" => [link.call("1", "https://bar.example")]},
+          "other" => {"name" => "Other bookmarks", "children" => [link.call("2", "https://other.example")]},
+          "synced" => {"name" => "Mobile bookmarks", "children" => [link.call("3", "https://synced.example")]}
+        }))
+
+        parser = Booker::Parsers::Chrome.new(path, "")
+        parser.parse
+        folders = parser.results.to_h { |b| [b.url, b.folder] }
+
+        expect(folders).to eq(
+          "https://bar.example" => "|",
+          "https://other.example" => "|other bookmarks/",
+          "https://synced.example" => "|mobile bookmarks/"
+        )
+      end
+    end
+
     it "should filter bookmarks by search term" do
       parser = Booker::Parsers::Chrome.new(fixture_path("bookmarks.json"), "chrome")
       parser.parse
@@ -105,6 +128,17 @@ RSpec.describe Booker::Parsers::Base do
       results = parser.results
       expect(results).to be_a(Array)
       expect(results).not_to be_empty
+    end
+
+    # without Full Disk Access the read itself is refused; that is a warning
+    # and an empty result, never a backtrace on every run
+    it "warns rather than raising when macOS refuses the read" do
+      parser = Booker::Parsers::Safari.new("/Users/x/Library/Safari/Bookmarks.plist", "")
+      allow(File).to receive(:binread).and_raise(Errno::EPERM)
+      allow(Open3).to receive(:capture3).and_return(["", "", instance_double(Process::Status, success?: false)])
+
+      expect { parser.parse }.to output(/Full Disk Access/).to_stderr
+      expect(parser.results).to be_empty
     end
 
     it "should filter bookmarks by search term" do
@@ -219,6 +253,9 @@ RSpec.describe Booker::Parsers::Firefox do
       INSERT INTO moz_places VALUES (1, 'https://example.com/olympics');
       INSERT INTO moz_bookmarks VALUES (1, 0, 'toolbar', NULL, 'toolbar_____');
       INSERT INTO moz_bookmarks VALUES (2, 1, 'olympics', 1, 'aaaa');
+      INSERT INTO moz_places VALUES (2, 'https://example.com/menu');
+      INSERT INTO moz_bookmarks VALUES (3, 0, 'menu', NULL, 'menu________');
+      INSERT INTO moz_bookmarks VALUES (4, 3, 'saved from the star', 2, 'bbbb');
     SQL
     db.close
   end
@@ -236,6 +273,15 @@ RSpec.describe Booker::Parsers::Firefox do
 
   it "keeps the folder path from the bookmark tree" do
     expect(parse.first.folder).to start_with("|")
+  end
+
+  # the menu is where firefox's star button saves to by default
+  it "reads the bookmarks menu as well as the toolbar, under its own folder" do
+    folders = parse.to_h { |b| [b.url, b.folder] }
+    expect(folders).to eq(
+      "https://example.com/olympics" => "|/",
+      "https://example.com/menu" => "|menu/"
+    )
   end
 
   it "filters on the search term" do

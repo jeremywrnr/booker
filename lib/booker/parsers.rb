@@ -50,22 +50,30 @@ module Booker
     class Chrome < Base
       def parse
         begin
-          local_bookmarks = JSON.parse(File.read(@file_path))
-          @chrome_bookmarks = local_bookmarks["roots"]["bookmark_bar"]["children"]
+          # every root, not just the bar: "other bookmarks" is where chrome
+          # files anything saved without picking a folder, and "mobile
+          # bookmarks" is what sync brings over from a phone
+          roots = JSON.parse(File.read(@file_path))["roots"]
+          @chrome_roots = roots.filter_map do |key, root|
+            next unless root.is_a?(Hash) && root["children"]
+
+            # the bar keeps the bare "|" it always had, so existing folders
+            # read the same; the others are named as chrome names them
+            [root["children"], (key == "bookmark_bar") ? "|" : "|#{root["name"]}/"]
+          end
+          raise "no bookmark roots" if @chrome_roots.empty?
         rescue
           warn "Warning: ".yel + "Bookmarks file not found or invalid."
           warn "Suggest: ".grn + "booker --install bookmarks"
           return
         end
 
-        parse_recursive
+        @chrome_roots.each { |children, title| parse_recursive(Folder.new(children, title)) }
       end
 
       private
 
-      def parse_recursive(root = nil)
-        root = Folder.new(@chrome_bookmarks, "|") if root.nil?
-
+      def parse_recursive(root)
         root.json.each { |x| parse_link(root.title, x) }
         root.json.each { |x| parse_folder(root, x) }
       end
@@ -143,15 +151,19 @@ module Booker
           # Recursive CTE query to build folder paths
           query = <<-SQL
             WITH RECURSIVE bookmark_tree(id, parent, title, url, path) AS (
-              -- Start with bookmarks toolbar root
+              -- Start with the children of every user-facing root: the menu is
+              -- where firefox saves a bookmark by default, so the toolbar alone
+              -- missed most of them. toolbar paths stay unprefixed, as before
               SELECT b.id, b.parent, b.title, p.url,
-                     CAST(b.title as TEXT) as path
+                     CAST(CASE r.guid
+                       WHEN 'toolbar_____' THEN b.title
+                       ELSE COALESCE(r.title, '') || '/' || b.title
+                     END as TEXT) as path
               FROM moz_bookmarks b
+              INNER JOIN moz_bookmarks r ON b.parent = r.id
               LEFT JOIN moz_places p ON b.fk = p.id
-              WHERE b.parent = (
-                SELECT id FROM moz_bookmarks
-                WHERE guid = 'toolbar_____'
-              )
+              WHERE r.guid IN
+                ('toolbar_____', 'menu________', 'unfiled_____', 'mobile______')
 
               UNION ALL
 
@@ -217,7 +229,14 @@ module Booker
         # sniff the head rather than reading the whole file: on the binary path
         # the contents are thrown away and plutil reads it again from disk, and
         # a real Bookmarks.plist grows with the user's bookmarks
-        head = File.binread(path, 512).to_s
+        head = begin
+          File.binread(path, 512).to_s
+        rescue Errno::EPERM, Errno::EACCES
+          # macOS privacy protection, when this process lacks Full Disk Access.
+          # the file is binary on a mac anyway, so leave it to plutil - which
+          # may have been granted access on its own (--install safari, [B])
+          ""
+        end
 
         # Already an XML plist (fixtures, non-macOS). Binary plists need plutil
         # (macOS-only); the JSON converter rejects <data>/<date> fields, so xml1.

@@ -333,6 +333,18 @@ RSpec.describe "#install_bookmarks" do
     expect(@written).to eq([[:bookmarks, chrome]])
   end
 
+  # to_i read a typo as 0 - every source - and -1 as the end of the list
+  ["x", "-1", "3", ""].each do |answer|
+    it "rejects #{answer.inspect} rather than guessing a source" do
+      add_chrome
+      add_firefox
+      allow(booker).to receive(:gets).and_return("#{answer}\n")
+
+      expect { capture_stdout { booker.install_bookmarks } }.to raise_error(SystemExit)
+      expect(@written).to be_empty
+    end
+  end
+
   it "exits when the prompt gets no answer" do
     add_chrome
     add_firefox
