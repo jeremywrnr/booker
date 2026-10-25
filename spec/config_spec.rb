@@ -254,6 +254,22 @@ RSpec.describe "Booker::Config file handling" do
     end
   end
 
+  # falling back to defaults is fine for a search, but writing them would wipe
+  # whatever the user had in the file alongside the typo
+  it "refuses to write over a config file it could not read" do
+    Dir.mktmpdir do |tmp|
+      target = File.join(tmp, ".booker.yml")
+      File.write(target, ":searcher: [unclosed\n")
+      stub_const("Booker::Config::HOME", tmp)
+      stub_const("Booker::Config::YAMLCONF", target)
+
+      config = nil
+      capture_stderr { config = Booker::Config.new }
+      expect { config.write(:bookmarks, ["/a"]) }.to raise_error(Booker::Config::Unreadable)
+      expect(File.read(target)).to eq(":searcher: [unclosed\n")
+    end
+  end
+
   it "discovers chrome bookmarks sitting under a profile directory" do
     Dir.mktmpdir do |tmp|
       stub_const("Booker::Config::HOME", tmp)

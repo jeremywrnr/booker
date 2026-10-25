@@ -57,6 +57,10 @@ module Booker
 
   # configuration
   class Config
+    # raised by #write rather than replacing a file that exists but would not
+    # parse: the defaults in memory are a fallback, not the user's settings
+    class Unreadable < StandardError; end
+
     VALID = [:searcher, :bookmarks, :browser, :picker].freeze
     HOME = ENV.fetch("HOME", "/usr/local/").freeze
     YAMLCONF = (HOME + "/.booker.yml").freeze
@@ -123,6 +127,7 @@ module Booker
       # every psych failure means the same thing here - an unusable config to
       # fall back from rather than crash on. rescuing SyntaxError alone let
       # anchors through as an AliasesNotEnabled backtrace under psych 4
+      @unreadable = true
       warn "Warning: ".red +
         "YAML configuration file could not be read. Using defaults."
       false
@@ -130,6 +135,11 @@ module Booker
 
     # used for creating and updating the default configuration
     def write(k = nil, v = nil)
+      if @unreadable
+        raise Unreadable, "#{YAMLCONF} could not be read - fix or remove it, " \
+          "it was left as is"
+      end
+
       @config[k] = v unless k.nil? # update users yaml config file
       File.write(YAMLCONF, @config.to_yaml)
     end
