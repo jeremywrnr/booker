@@ -243,8 +243,11 @@ module Booker
     end
 
     # every target that touches the config is about to write it, so the
-    # missing-file warning would only tell the user to do what they are doing
-    def config = Config.default(quiet_missing: true)
+    # missing-file warning would only tell the user to do what they are doing.
+    # its own instance rather than Config.default: that memo is shared with the
+    # rest of the run, and whichever caller built it first would decide whether
+    # the warning shows for everyone
+    def config = @config ||= Config.new(quiet_missing: true)
 
     def home
       ENV["HOME"] || "/usr/local"

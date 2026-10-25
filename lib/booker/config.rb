@@ -65,7 +65,7 @@ module Booker
       # one instance per run. Bookmarks, Picker and the CLI want the same
       # answers, and one Config apiece meant parsing the yaml three times,
       # discovering three times, and warning three times to say it once
-      def default(**) = @default ||= new(**)
+      def default = @default ||= new
 
       # the memo outlives a single example, so the suite drops it between them
       def reset! = @default = nil

@@ -211,6 +211,12 @@ RSpec.describe "Booker::Config file handling" do
     expect(config.read("/nonexistent/.booker.yml")).to be false
   end
 
+  # outside --install, a missing file is worth saying so, with the fix
+  it "warns and suggests --install config when the config file is missing" do
+    expect { config.read("/nonexistent/.booker.yml") }
+      .to output(/couldn't be found.*--install config/m).to_stderr
+  end
+
   it "falls back to defaults when the config file is not valid yaml" do
     Dir.mktmpdir do |tmp|
       bad = File.join(tmp, "bad.yml")
