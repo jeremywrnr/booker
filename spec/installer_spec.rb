@@ -303,7 +303,7 @@ RSpec.describe "#install_bookmarks" do
   it "offers every source when more than one exists" do
     add_chrome
     add_firefox
-    allow(booker).to receive(:gets).and_return("0\n")
+    allow($stdin).to receive(:gets).and_return("0\n")
 
     output = capture_stdout { booker.install_bookmarks }
 
@@ -314,7 +314,7 @@ RSpec.describe "#install_bookmarks" do
   it "saves all sources when 0 is picked" do
     chrome = add_chrome
     firefox = add_firefox
-    allow(booker).to receive(:gets).and_return("0\n")
+    allow($stdin).to receive(:gets).and_return("0\n")
 
     capture_stdout { booker.install_bookmarks }
 
@@ -326,7 +326,7 @@ RSpec.describe "#install_bookmarks" do
   it "saves just the numbered source when one is picked" do
     chrome = add_chrome
     add_firefox
-    allow(booker).to receive(:gets).and_return("1\n")
+    allow($stdin).to receive(:gets).and_return("1\n")
 
     capture_stdout { booker.install_bookmarks }
 
@@ -338,17 +338,30 @@ RSpec.describe "#install_bookmarks" do
     it "rejects #{answer.inspect} rather than guessing a source" do
       add_chrome
       add_firefox
-      allow(booker).to receive(:gets).and_return("#{answer}\n")
+      allow($stdin).to receive(:gets).and_return("#{answer}\n")
 
       expect { capture_stdout { booker.install_bookmarks } }.to raise_error(SystemExit)
       expect(@written).to be_empty
     end
   end
 
+  # Kernel#gets reads ARGF, which tried to open `bookmarks` - the install
+  # target still in ARGV - as a file instead of asking the terminal
+  it "reads the choice from stdin even with install targets in ARGV" do
+    chrome = add_chrome
+    add_firefox
+    stub_const("ARGV", ["bookmarks"])
+    allow($stdin).to receive(:gets).and_return("1\n")
+
+    capture_stdout { booker.install_bookmarks }
+
+    expect(@written).to eq([[:bookmarks, chrome]])
+  end
+
   it "exits when the prompt gets no answer" do
     add_chrome
     add_firefox
-    allow(booker).to receive(:gets).and_return(nil)
+    allow($stdin).to receive(:gets).and_return(nil)
 
     expect { capture_stdout { booker.install_bookmarks } }.to raise_error(SystemExit)
   end
