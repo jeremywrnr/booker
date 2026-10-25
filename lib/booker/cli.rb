@@ -13,10 +13,10 @@ module Booker
 
     # a bookmark id is "<source index>_<browser id>". safari uses a uuid where
     # chrome and firefox number theirs, so the second half is anything id-shaped
-    # rather than digits; bare digits stay valid for single-source configs
-    # written before the prefix existed. completion inserts urls now, but ids
-    # are still first class - --bookmark takes them, the picker returns them
-    BOOKMARK_ID = /\A(?:\d+_[a-z0-9-]+|[0-9_]+)\z/i
+    # rather than digits. a bare number is a search: `booker 2024` is looking
+    # for a year. completion inserts urls now, but ids are still first class -
+    # --bookmark takes them, the picker returns them
+    BOOKMARK_ID = /\A\d+_[a-z0-9-]+\z/i
 
     def initialize(args)
       parse args
@@ -83,7 +83,9 @@ module Booker
       case @mode
       when :bookmark
         pexit "Error: ".red + "booker --bookmark expects bookmark id" if args.empty?
-        open_bookmark(args)
+        # a bare number is an id from before ids carried their source, when
+        # there was only ever source 0
+        open_bookmark(args.map { |id| /\A\d+\z/.match?(id) ? "0_#{id}" : id })
       when :install
         installer.install(args.empty? ? %w[completion config bookmarks] : args)
       when :search
@@ -98,7 +100,9 @@ module Booker
       when :complete_raw
         Bookmarks.new(args.join(" ")).autocomplete_raw
       end
-    rescue OptionParser::InvalidOption => e
+    # ParseError rather than InvalidOption: `booker --list=x` is a
+    # NeedlessArgument, and every other subclass is just as much a usage error
+    rescue OptionParser::ParseError => e
       pexit "Error: ".red + e.message
     end
 
@@ -146,8 +150,10 @@ module Booker
     def open_search(term)
       puts "searching ".grn + term
       search = Config.default.searcher
-      term = term.tr(" ", "+")
-      openweb(search + term)  # No shell escape needed - it's a URL
+      # encoded, not just spaces to "+": a literal + reads back as a space, &
+      # ends the query and # starts a fragment, so `c++` searched for "c"
+      require "uri"
+      openweb(search + URI.encode_www_form_component(term))
     end
 
     # a term matching bookmarks is offered as a choice; one matching nothing is

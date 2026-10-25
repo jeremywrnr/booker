@@ -243,6 +243,25 @@ RSpec.describe "Booker::Config file handling" do
     end
   end
 
+  # `searcher:` is plain yaml; booker's own #write emits `:searcher:`
+  it "reads plain string keys as the symbols #write emits" do
+    Dir.mktmpdir do |tmp|
+      target = File.join(tmp, ".booker.yml")
+      File.write(target, "searcher: https://duckduckgo.com/?q=\n")
+      expect(config.read(target)).to eq(searcher: "https://duckduckgo.com/?q=")
+    end
+  end
+
+  # a list or a bare string parses, but is not a config to fall back from and
+  # then write over
+  it "treats yaml that is not a mapping as unreadable" do
+    Dir.mktmpdir do |tmp|
+      target = File.join(tmp, ".booker.yml")
+      File.write(target, "- just\n- a list\n")
+      expect(capture_stderr { expect(config.read(target)).to be false }).to include("could not be read")
+    end
+  end
+
   it "writes updated keys back out as yaml" do
     Dir.mktmpdir do |tmp|
       target = File.join(tmp, ".booker.yml")

@@ -91,7 +91,7 @@ module Booker
 
       # prune bad config keys
       @config.each_key do |k|
-        if !VALID.include? k.to_sym
+        if !VALID.include? k
           warn "Failure:".red + " Bad key found in config file: #{k}"
           exit 1
         end
@@ -115,7 +115,15 @@ module Booker
 
     def read(file)
       # #write emits symbol keys, so they have to be permitted on the way back
-      YAML.safe_load_file(file, permitted_classes: [Symbol])
+      conf = YAML.safe_load_file(file, permitted_classes: [Symbol])
+      # an empty file is no config at all, which is fine to write over
+      return false if conf.nil?
+      raise Psych::Exception, "not a mapping" unless conf.is_a?(Hash)
+
+      # symbols throughout, whatever the file used: `searcher:` is how yaml is
+      # usually written, but the readers look up :searcher, so a config spelled
+      # the usual way passed validation and then read back as nil
+      conf.transform_keys { |k| k.to_s.to_sym }
     rescue Errno::ENOENT
       unless @quiet_missing
         warn "Warning: ".yel +

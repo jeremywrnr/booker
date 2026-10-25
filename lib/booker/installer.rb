@@ -290,7 +290,13 @@ module Booker
 
           input = gets
           raise "No input provided" if input.nil?
-          selection = input.chomp.to_i
+
+          # to_i alone read any typo as 0 - all sources - and a negative number
+          # as an index from the end of the list
+          selection = Integer(input.strip, 10, exception: false)
+          unless selection&.between?(0, bms.length)
+            raise "Invalid selection: #{input.strip.inspect}"
+          end
 
           if selection == 0
             # User selected "ALL" - save array of all paths
