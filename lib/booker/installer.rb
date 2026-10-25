@@ -270,8 +270,7 @@ module Booker
         bms = Sources.discover
 
         if bms.empty? # no bookmarks found
-          puts "Failure: ".red + "bookmarks file could not be found."
-          raise
+          raise "No browser bookmarks file could be found."
         elsif bms.length == 1
           # Auto-select if only one source found
           selected = bms.first
@@ -288,7 +287,9 @@ module Booker
             puts (i + 1).to_s.grn + " - " + label + " " + path
           end
 
-          input = gets
+          # $stdin, not Kernel#gets: that reads ARGF, which opens the install
+          # targets still left in ARGV (`bookmarks`) as files
+          input = $stdin.gets
           raise "No input provided" if input.nil?
 
           # to_i alone read any typo as 0 - all sources - and a negative number

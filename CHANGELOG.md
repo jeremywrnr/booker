@@ -11,6 +11,13 @@ using the version's section below as the release notes.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`booker --install bookmarks` waits for your pick again.** With more than
+  one bookmark source it read the answer from a file named `bookmarks` instead
+  of the terminal, failing with `No such file or directory`. Finding no sources
+  also no longer prints a stray `unhandled exception`.
+
 ## [2.2.0] - 2026-10-24
 
 ### Changed
