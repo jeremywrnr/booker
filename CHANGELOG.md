@@ -12,33 +12,36 @@ no git tags, so there are no compare links here.
 
 ## [2.1.0] - 2026-10-24
 
-A modernization pass over library code that had gone largely untouched since
-2015. No new features; the CLI takes the same arguments and prints the same
-table.
-
 ### Fixed
 
-- Searching for anything containing a regex metacharacter no longer crashes.
-  The search term was interpolated straight into a `Regexp`, so `booker "c++"`
-  raised `RegexpError` before it searched anything, and a term like `(a+)+$`
-  could hang. Terms are now escaped and matched literally.
-- A config file using YAML anchors no longer takes down the whole command.
-  Psych 4 stopped permitting aliases by default, which raises
-  `Psych::AliasesNotEnabled` rather than the `Psych::SyntaxError` that was being
-  rescued, so booker exited with a backtrace instead of falling back to
-  defaults as intended.
 - `booker --install config` and `--install bookmarks` no longer warn that the
   config file is missing and suggest `booker --install config` — the command
   already being run — just before writing it.
 
 ### Changed
 
-These four are visible in day-to-day use; the rest of the pass is not.
-
 - **The bookmark picker ranks matches by score.** fzf ran with `--no-sort`, so
   a query's scattered fuzzy hits were listed in bookmark order, above bookmarks
   that contain it literally. Exact matches now come first; booker's order still
   breaks ties and is kept for an empty query.
+- The `json` dependency now allows 3.x (`>= 2.21, < 4.0`).
+
+## [2.0.0] - 2026-08-08
+
+New shell completion, plus a modernization pass over library code that had gone
+largely untouched since 2015. Otherwise the CLI takes the same arguments and
+prints the same table.
+
+### Added
+
+- Tab completion for bash and fish, alongside the existing zsh support, with
+  `booker --install` detecting which shells are present.
+- GitHub Actions CI across Ruby 3.2 through 4.0.
+
+### Changed
+
+These three are visible in day-to-day use; the rest of the pass is not.
+
 - **Warnings and errors now go to stderr instead of stdout.** A parse failure
   used to print onto stdout, which is also where `--complete-raw` writes the
   feed the shell completion scripts read — so a broken bookmarks file could put
@@ -56,7 +59,20 @@ These four are visible in day-to-day use; the rest of the pass is not.
   those methods is affected — the CLI is not.
 - Terminal width is read through `io/console` rather than shelling out to
   `tput cols`, removing a subprocess from every run.
-- The `json` dependency now allows 3.x (`>= 2.21, < 4.0`).
+- Library restructured from flat files under `lib/` into `lib/booker/`, with one
+  parser class per browser.
+
+### Fixed
+
+- Searching for anything containing a regex metacharacter no longer crashes.
+  The search term was interpolated straight into a `Regexp`, so `booker "c++"`
+  raised `RegexpError` before it searched anything, and a term like `(a+)+$`
+  could hang. Terms are now escaped and matched literally.
+- A config file using YAML anchors no longer takes down the whole command.
+  Psych 4 stopped permitting aliases by default, which raises
+  `Psych::AliasesNotEnabled` rather than the `Psych::SyntaxError` that was being
+  rescued, so booker exited with a backtrace instead of falling back to
+  defaults as intended.
 
 ### Internal
 
@@ -76,19 +92,6 @@ These four are visible in day-to-day use; the rest of the pass is not.
   soft-deprecated `add_runtime_dependency`; the homepage is `https`. Added
   `.ruby-version`, `.standard.yml` pinned to the 3.2 floor, and a dependabot
   config.
-
-## [2.0.0] - 2026-08-08
-
-### Added
-
-- Tab completion for bash and fish, alongside the existing zsh support, with
-  `booker --install` detecting which shells are present.
-- GitHub Actions CI across Ruby 3.2 through 4.0.
-
-### Changed
-
-- Library restructured from flat files under `lib/` into `lib/booker/`, with one
-  parser class per browser.
 
 ## Earlier releases
 
