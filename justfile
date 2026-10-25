@@ -62,6 +62,32 @@ clean:
     @echo "cleaning gems..."
     rm -fv *.gem
 
-# Clean, build, and push gem to RubyGems
-push: clean build
+# The CHANGELOG section for this version, as the GitHub release body
+release-notes:
+    @awk -v head="## [{{version}}]" ' \
+      /^## \[/ { p = index($0, head) == 1; next } \
+      !p { next } \
+      NF { if (seen) while (blank-- > 0) print ""; blank = 0; seen = 1; print; next } \
+      { blank++ }' CHANGELOG.md
+
+# Everything that has to be true before anything is published: a gem pushed
+# with no matching release, or a release on a commit that is not on main, is
+# the half-done state this exists to rule out
+# Check main is clean, pushed and has notes for this version
+release-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    fail() { echo "release-check: $*" >&2; exit 1; }
+    [ "$(git branch --show-current)" = main ] || fail "not on main"
+    git diff --quiet HEAD || fail "uncommitted changes"
+    [ "$(git rev-parse HEAD)" = "$(gh api 'repos/{owner}/{repo}/commits/main' --jq .sha)" ] \
+      || fail "HEAD is not origin/main - pull or push first"
+    [ -n "$({{just_executable()}} -f {{justfile()}} release-notes)" ] || fail "CHANGELOG.md has no [{{version}}] section"
+    ! gh release view v{{version}} >/dev/null 2>&1 || fail "v{{version}} is already released"
+
+# Clean, build, push gem to RubyGems, and tag a GitHub release
+push: release-check clean build
     gem push {{gem_name}}-{{version}}.gem
+    printf '%s\n\n---\nPublished to RubyGems on %s: https://rubygems.org/gems/{{gem_name}}/versions/{{version}}\n' \
+      "$({{just_executable()}} -f {{justfile()}} release-notes)" "$(date +%F)" \
+      | gh release create v{{version}} --target "$(git rev-parse HEAD)" --title v{{version}} --notes-file -

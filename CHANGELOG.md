@@ -5,8 +5,9 @@ Notable changes to booker. The format follows
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Releases before 2.0.0 predate this file; their entries are reconstructed from
-the commit history and are one-liners rather than full notes. The repository has
-no git tags, so there are no compare links here.
+the commit history and are one-liners rather than full notes. Every version
+published to RubyGems is tagged and has a GitHub release; `just push` makes both,
+using the version's section below as the release notes.
 
 ## [Unreleased]
 
