@@ -363,6 +363,21 @@ RSpec.describe "#install_config" do
     end
   end
 
+  it "leaves an unreadable config file alone and says why" do
+    Dir.mktmpdir do |home|
+      target = File.join(home, ".booker.yml")
+      File.write(target, ":searcher: [unclosed\n")
+      stub_const("Booker::Config::HOME", home)
+      stub_const("Booker::Config::YAMLCONF", target)
+
+      err = capture_stderr do
+        expect { capture_stdout { booker.install_config } }.to raise_error(SystemExit)
+      end
+      expect(err).to include("could not be read - fix or remove it")
+      expect(File.read(target)).to eq(":searcher: [unclosed\n")
+    end
+  end
+
   it "exits when the config file cannot be written" do
     allow_any_instance_of(Booker::Config).to receive(:write).and_raise(Errno::EACCES)
     expect { capture_stdout { booker.install_config } }.to raise_error(SystemExit)

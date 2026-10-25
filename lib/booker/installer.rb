@@ -325,6 +325,8 @@ module Booker
     def install_config
       config.write
       puts "Success: ".grn + "example config file written to ~/.booker"
+    rescue Config::Unreadable => e
+      pexit "Failure: ".red + e.message
     rescue
       pexit "Failure: ".red + "could not write example config file to ~/.booker"
     end
