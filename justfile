@@ -55,6 +55,8 @@ build:
     @echo "new shells are ready. zsh keeps _booker for the life of a session,"
     @echo "so to pick it up in THIS one:  unfunction _booker && autoload -U _booker"
 
+alias install := build
+
 # Clean up gem files
 clean:
     @echo "cleaning gems..."
