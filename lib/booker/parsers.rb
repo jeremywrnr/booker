@@ -50,25 +50,25 @@ module Booker
     class Chrome < Base
       def parse
         begin
-          # every root, not just the bar: "other bookmarks" is where chrome
-          # files anything saved without picking a folder, and "mobile
-          # bookmarks" is what sync brings over from a phone
-          roots = JSON.parse(File.read(@file_path))["roots"]
-          @chrome_roots = roots.filter_map do |key, root|
-            next unless root.is_a?(Hash) && root["children"]
-
-            # the bar keeps the bare "|" it always had, so existing folders
-            # read the same; the others are named as chrome names them
-            [root["children"], (key == "bookmark_bar") ? "|" : "|#{root["name"]}/"]
-          end
-          raise "no bookmark roots" if @chrome_roots.empty?
+          roots = JSON.parse(File.read(@file_path))["roots"].select { |_, r| r.is_a?(Hash) }
         rescue
           warn "Warning: ".yel + "Bookmarks file not found or invalid."
           warn "Suggest: ".grn + "booker --install bookmarks"
           return
         end
 
-        @chrome_roots.each { |children, title| parse_recursive(Folder.new(children, title)) }
+        # every root, not just the bar: "other bookmarks" is where chrome files
+        # anything saved without picking a folder, and "mobile bookmarks" is
+        # what sync brings over from a phone. the bar keeps the bare "|" it
+        # always had; the others are folders like any other, named by chrome
+        top = Folder.new([], "|")
+        roots.each do |key, root|
+          if key == "bookmark_bar"
+            parse_recursive(Folder.new(root["children"], "|"))
+          else
+            parse_folder(top, root)
+          end
+        end
       end
 
       private

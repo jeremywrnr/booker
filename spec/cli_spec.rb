@@ -70,6 +70,12 @@ RSpec.describe Booker::CLI do
     expect { run!("2024") }.to output(/searching.*2024/m).to_stdout
   end
 
+  # ids from before the source prefix, which only ever had source 0
+  it "reads a bare number given to --bookmark as an id from the first source" do
+    allow_any_instance_of(Booker::Bookmarks).to receive(:bookmark_url).with("0_123").and_return("http://example.com")
+    expect { run!("--bookmark 123") }.to output(/opening bookmark.*example/m).to_stdout
+  end
+
   it "encodes the search term, so + & and # reach the engine intact" do
     allow_any_instance_of(Booker::Config).to receive(:searcher).and_return("https://s.example/?q=")
     expect_any_instance_of(Booker::CLI).to receive(:openweb).with("https://s.example/?q=c%2B%2B+a%26b+%23x")
@@ -180,7 +186,7 @@ RSpec.describe "argument dispatch" do
   end
 
   it "routes --bookmark to opening that bookmark" do
-    expect(booker).to receive(:open_bookmark).with(["1"])
+    expect(booker).to receive(:open_bookmark).with(["0_1"])
     booker.dispatch_option(["-b", "1"])
   end
 

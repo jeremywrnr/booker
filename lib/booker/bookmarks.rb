@@ -119,11 +119,7 @@ module Booker
     # get link (from id number). #each returned @allurls itself when nothing
     # matched, so a bad id reached open_bookmark as an Array and blew up with a
     # TypeError instead of the "bookmark not found" message
-    #
-    # a bare number is an id from before ids carried their source, when there
-    # was only ever source 0 - so `--bookmark 123` keeps working
     def bookmark_url(id)
-      id = "0_#{id}" if /\A\d+\z/.match?(id.to_s)
       @allurls.find { |url| id == url.id }&.url
     end
   end

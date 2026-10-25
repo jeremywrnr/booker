@@ -13,11 +13,9 @@ module Booker
 
     # a bookmark id is "<source index>_<browser id>". safari uses a uuid where
     # chrome and firefox number theirs, so the second half is anything id-shaped
-    # rather than digits. a bare number is a search - `booker 2024` is looking
-    # for a year, and no id has been prefix-less since multi-source support -
-    # though --bookmark still takes one (see Bookmarks#bookmark_url).
-    # completion inserts urls now, but ids are still first class - --bookmark
-    # takes them, the picker returns them
+    # rather than digits. a bare number is a search: `booker 2024` is looking
+    # for a year. completion inserts urls now, but ids are still first class -
+    # --bookmark takes them, the picker returns them
     BOOKMARK_ID = /\A\d+_[a-z0-9-]+\z/i
 
     def initialize(args)
@@ -85,7 +83,9 @@ module Booker
       case @mode
       when :bookmark
         pexit "Error: ".red + "booker --bookmark expects bookmark id" if args.empty?
-        open_bookmark(args)
+        # a bare number is an id from before ids carried their source, when
+        # there was only ever source 0
+        open_bookmark(args.map { |id| /\A\d+\z/.match?(id) ? "0_#{id}" : id })
       when :install
         installer.install(args.empty? ? %w[completion config bookmarks] : args)
       when :search

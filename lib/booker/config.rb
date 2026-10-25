@@ -83,20 +83,11 @@ module Booker
       # the yaml file if there is one, and only work out the defaults when
       # there is not: discovery walks every chrome profile directory to answer
       # a question the config file has already answered
-      #
-      # symbols throughout, whatever the file used: `searcher:` is how yaml is
-      # usually written, but the readers below look up :searcher, so a config
-      # spelled the usual way passed validation and then read back as nil
-      conf = read(YAMLCONF)
-      @config = if conf.is_a?(Hash)
-        conf.transform_keys { |k| k.to_s.to_sym }
-      else
-        {
-          browser: "open ",
-          searcher: "https://google.com/search?q=",
-          bookmarks: detect_default_bookmarks
-        }
-      end
+      @config = read(YAMLCONF) || {
+        browser: "open ",
+        searcher: "https://google.com/search?q=",
+        bookmarks: detect_default_bookmarks
+      }
 
       # prune bad config keys
       @config.each_key do |k|
@@ -124,7 +115,15 @@ module Booker
 
     def read(file)
       # #write emits symbol keys, so they have to be permitted on the way back
-      YAML.safe_load_file(file, permitted_classes: [Symbol])
+      conf = YAML.safe_load_file(file, permitted_classes: [Symbol])
+      # an empty file is no config at all, which is fine to write over
+      return false if conf.nil?
+      raise Psych::Exception, "not a mapping" unless conf.is_a?(Hash)
+
+      # symbols throughout, whatever the file used: `searcher:` is how yaml is
+      # usually written, but the readers look up :searcher, so a config spelled
+      # the usual way passed validation and then read back as nil
+      conf.transform_keys { |k| k.to_s.to_sym }
     rescue Errno::ENOENT
       unless @quiet_missing
         warn "Warning: ".yel +

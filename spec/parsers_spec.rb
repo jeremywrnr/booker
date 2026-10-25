@@ -61,9 +61,9 @@ RSpec.describe Booker::Parsers::Base do
         path = File.join(tmp, "Bookmarks")
         link = ->(id, url) { {"type" => "url", "id" => id, "name" => "n#{id}", "url" => url} }
         File.write(path, JSON.generate("roots" => {
-          "bookmark_bar" => {"name" => "Bookmarks bar", "children" => [link.call("1", "https://bar.example")]},
-          "other" => {"name" => "Other bookmarks", "children" => [link.call("2", "https://other.example")]},
-          "synced" => {"name" => "Mobile bookmarks", "children" => [link.call("3", "https://synced.example")]}
+          "bookmark_bar" => {"type" => "folder", "name" => "Bookmarks bar", "children" => [link.call("1", "https://bar.example")]},
+          "other" => {"type" => "folder", "name" => "Other bookmarks", "children" => [link.call("2", "https://other.example")]},
+          "synced" => {"type" => "folder", "name" => "Mobile bookmarks", "children" => [link.call("3", "https://synced.example")]}
         }))
 
         parser = Booker::Parsers::Chrome.new(path, "")
