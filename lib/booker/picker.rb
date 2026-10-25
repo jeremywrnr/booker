@@ -12,7 +12,10 @@ module Booker
   module Picker
     # --delimiter/--with-nth hide the id column: it is noise on screen, and
     # hiding it also takes it out of the match, so typing "2_" does not pull up
-    # every bookmark from the second source. --no-sort keeps booker's ordering.
+    # every bookmark from the second source. fzf ranks by match score, so a
+    # literal "sofa" beats s..o..f..a scattered across a long url, and
+    # --tiebreak=index keeps booker's ordering among equal scores (and for the
+    # empty query, which fzf never sorts).
     #
     # deliberately no --multi: under it fzf reads tab as "mark this and move
     # down" - the one key booker's own completion trained everybody to press -
@@ -25,7 +28,7 @@ module Booker
       "fzf",
       "--height=40%",
       "--reverse",
-      "--no-sort",
+      "--tiebreak=index",
       "--delimiter=\t",
       "--with-nth=2..",
       "--prompt=bookmark> "
