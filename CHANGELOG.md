@@ -10,6 +10,13 @@ no git tags, so there are no compare links here.
 
 ## [Unreleased]
 
+### Fixed
+
+- `booker --install config` and `--install bookmarks` no longer overwrite a
+  `~/.booker.yml` that exists but cannot be parsed. They used to write the
+  defaults booker had fallen back to over it, replacing any custom searcher or
+  browser along with the typo; now they leave the file as is and say so.
+
 ## [2.1.0] - 2026-10-24
 
 ### Fixed
