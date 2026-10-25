@@ -10,8 +10,35 @@ no git tags, so there are no compare links here.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-24
+
+### Changed
+
+- **Every bookmark folder is searched, not just the toolbar.** Chrome was read
+  only from the bookmarks bar and Firefox only from its toolbar, so Chrome's
+  Other and Mobile bookmarks and Firefox's Bookmarks Menu — where its star
+  button saves by default — Other Bookmarks and Mobile were never offered.
+  Expect many more results. Toolbar folders read as before; the others are
+  prefixed with their root's name.
+- **A bare number is a search term, not a bookmark id.** `booker 2024` used to
+  fail with `bookmark 2024 not found`. Ids on the command line now take the
+  `<source>_<id>` form booker has emitted since multi-source support;
+  `booker --bookmark 123` still accepts a bare one.
+
 ### Fixed
 
+- Search terms are URL-encoded. Only spaces were converted, so `booker -s c++`
+  searched for "c", `&` cut the query short and `#` dropped the rest.
+- Safari bookmarks no longer crash every run when the terminal lacks Full Disk
+  Access; booker warns and carries on. Granting access to `plutil` alone
+  (`--install safari`, option B) now works as described.
+- A `~/.booker.yml` written with plain keys (`searcher:` rather than
+  `:searcher:`) is read correctly instead of every setting coming back empty.
+- `booker --list=x` and other malformed options print a usage error instead of
+  a backtrace.
+- The bookmark source prompt in `--install bookmarks` rejects anything but a
+  listed number. A typo or a blank Return used to select every source, and `-1`
+  the second-to-last.
 - `booker --install config` and `--install bookmarks` no longer overwrite a
   `~/.booker.yml` that exists but cannot be parsed. They used to write the
   defaults booker had fallen back to over it, replacing any custom searcher or
