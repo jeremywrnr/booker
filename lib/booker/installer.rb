@@ -242,6 +242,13 @@ module Booker
       yield if block_given?
     end
 
+    # every target that touches the config is about to write it, so the
+    # missing-file warning would only tell the user to do what they are doing.
+    # its own instance rather than Config.default: that memo is shared with the
+    # rest of the run, and whichever caller built it first would decide whether
+    # the warning shows for everyone
+    def config = @config ||= Config.new(quiet_missing: true)
+
     def home
       ENV["HOME"] || "/usr/local"
     end
@@ -288,7 +295,7 @@ module Booker
           if selection == 0
             # User selected "ALL" - save array of all paths
             puts "Selected: ".yel + "All sources (#{bms.length} bookmark files)"
-            Config.default.write(:bookmarks, bms)
+            config.write(:bookmarks, bms)
             puts "Success: ".grn + "config file updated to search all bookmark sources"
           else
             save_bookmarks(bms[selection - 1], "config file updated with your bookmarks")
@@ -302,7 +309,7 @@ module Booker
 
     def save_bookmarks(selected, message)
       puts "Selected: ".yel + selected
-      Config.default.write(:bookmarks, selected)
+      config.write(:bookmarks, selected)
       puts "Success: ".grn + message
     end
 
@@ -316,7 +323,7 @@ module Booker
     end
 
     def install_config
-      Config.default.write
+      config.write
       puts "Success: ".grn + "example config file written to ~/.booker"
     rescue
       pexit "Failure: ".red + "could not write example config file to ~/.booker"

@@ -351,6 +351,18 @@ RSpec.describe "#install_config" do
     expect(output).to include("example config file written")
   end
 
+  # the user is already doing what the missing-config warning would suggest
+  it "does not warn that the config file is missing" do
+    allow_any_instance_of(Booker::Config).to receive(:write)
+    Dir.mktmpdir do |home|
+      # a missing config falls back to discovery, which walks HOME - keep it
+      # off the developer's real browser profiles
+      stub_const("Booker::Config::HOME", home)
+      stub_const("Booker::Config::YAMLCONF", File.join(home, ".booker.yml"))
+      expect { capture_stdout { booker.install_config } }.not_to output.to_stderr
+    end
+  end
+
   it "exits when the config file cannot be written" do
     allow_any_instance_of(Booker::Config).to receive(:write).and_raise(Errno::EACCES)
     expect { capture_stdout { booker.install_config } }.to raise_error(SystemExit)

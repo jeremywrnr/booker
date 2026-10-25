@@ -71,7 +71,11 @@ module Booker
       def reset! = @default = nil
     end
 
-    def initialize
+    # quiet_missing is for --install, which is about to write the very file the
+    # warning would tell the user to go and create
+    def initialize(quiet_missing: false)
+      @quiet_missing = quiet_missing
+
       # the yaml file if there is one, and only work out the defaults when
       # there is not: discovery walks every chrome profile directory to answer
       # a question the config file has already answered
@@ -109,9 +113,11 @@ module Booker
       # #write emits symbol keys, so they have to be permitted on the way back
       YAML.safe_load_file(file, permitted_classes: [Symbol])
     rescue Errno::ENOENT
-      warn "Warning: ".yel +
-        "YAML configuration file couldn't be found. Using defaults."
-      warn "Suggest: ".grn + "booker --install config"
+      unless @quiet_missing
+        warn "Warning: ".yel +
+          "YAML configuration file couldn't be found. Using defaults."
+        warn "Suggest: ".grn + "booker --install config"
+      end
       false
     rescue Psych::Exception
       # every psych failure means the same thing here - an unusable config to
