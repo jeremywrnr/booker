@@ -351,6 +351,14 @@ RSpec.describe "#install_config" do
     expect(output).to include("example config file written")
   end
 
+  # the user is already doing what the missing-config warning would suggest
+  it "does not warn that the config file is missing" do
+    allow_any_instance_of(Booker::Config).to receive(:write)
+    stub_const("Booker::Config::YAMLCONF", "/nonexistent/.booker.yml")
+    Booker::Config.reset!
+    expect { capture_stdout { booker.install_config } }.not_to output.to_stderr
+  end
+
   it "exits when the config file cannot be written" do
     allow_any_instance_of(Booker::Config).to receive(:write).and_raise(Errno::EACCES)
     expect { capture_stdout { booker.install_config } }.to raise_error(SystemExit)
